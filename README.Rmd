@@ -1,0 +1,54 @@
+---
+title: "Oblique Random Survival Forests (ORSFs)"
+author: "Byron C. Jaeger, PhD."
+date: "August 16, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+Oblique random survival forest (ORSFs) are ensembles for right-censured survival data that use linear combinations of input variables to recursively partition a set of training data. Regularized Cox proportional hazard models identify optimal linear combinations of input variables in each recursive partitioning step while building survival trees.
+
+# Installation
+
+```{r, eval=FALSE}
+
+# The obliqueRSF package can be installed from GitHub:
+# install.packages("devtools")
+devtools::install_github("bcjaeger/obliqueRSF")
+
+```
+
+# Usage
+
+The `ORSF` function is the center piece of the `obliqueRSF` package 
+
+
+```{r}
+
+library(survival)
+library(randomForestSRC)
+library(party)
+library(tidyverse)
+library(pec)
+library(obliqueRSF)
+
+data("pbc",package='survival')
+pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
+pbc = pbc %>% 
+  dplyr::select(-id)%>%
+  mutate(trt=factor(trt),
+         ascites=factor(ascites),
+         hepato=factor(hepato),
+         spiders=factor(spiders),
+         edema=factor(edema),
+         stage=factor(stage))%>%
+  na.omit()
+
+orsf=ORSF(data=pbc,ntree=25,minsplit=100)
+
+```
