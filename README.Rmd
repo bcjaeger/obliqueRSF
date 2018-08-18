@@ -42,7 +42,7 @@ devtools::install_github("bcjaeger/obliqueRSF")
 The `ORSF` function is the center piece of the `obliqueRSF` package 
 
 
-```{r usage}
+```{r usage, fig.width=14,fig.height=7}
 
 # remove missings
 data("pbc",package='survival')
@@ -62,25 +62,9 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-trn=sample(1:nrow(pbc), round(nrow(pbc)*0.60))
-orsf=ORSF(data=pbc[trn,],ntree=1000,minsplit=30,tree.err=TRUE,verbose=FALSE)
-
-test_concordance=pec::cindex(orsf,data=pbc[-trn,],
-                             formula = Surv(time,status)~1,
-                             eval.times=seq(0,3500,length.out=100))
-
-cerr=1-mean(test_concordance$AppCindex[[1]],na.rm=T)
-
-test_ibrierscore=pec::pec(orsf,data=pbc[-trn,],
-                          formula = Surv(time,status)~1,
-                          eval.times=seq(0,3500,length.out=100))
-
-perr=pec::crps(test_ibrierscore)[2]
+orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=F)
 
 print(orsf)
-cat('\nTest error estimates:',
-    '\n  integrated Brier score:',perr,
-    '\n  integrated concordance:', cerr)
 
 labs=c("Concordance Index","Brier Score")
 
@@ -122,13 +106,21 @@ mdls=list(
                        data=pbc,penalty=1000)
 )
 
-set.seed(329) # for reproducibility
-# CAUTION: this will take ~45m to run
+# for reproducibility
+set.seed(329) 
+
 bri_score = pec::pec(mdls, data=pbc, cens.model = 'cox',
                      formula = Surv(time,status)~age, 
                      splitMethod = 'BootCv', B=10)
 
 print(bri_score)
+
+
+cnc_index = pec::cindex(mdls, data=pbc, cens.model = 'cox',
+                        formula = Surv(time,status)~age, 
+                        splitMethod = 'BootCv', B=10)
+
+print(cnc_index)
 
 
 ```

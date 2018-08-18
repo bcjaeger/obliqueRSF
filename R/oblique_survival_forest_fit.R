@@ -193,7 +193,7 @@ ORSF <- function(data,
 
   if(tree.err){
     
-    eval_indx=seq(round(ntree/20),ntree,by=round(ntree/20))
+    eval_indx=seq(10,ntree,by=10)
     tree_err=purrr::map(eval_indx,~forest_eval(oob_lst,tree_num=.))
     tree_err=purrr::reduce(tree_err,rbind)
     tree_err=data.frame(tree_err)

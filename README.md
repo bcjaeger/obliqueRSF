@@ -40,8 +40,7 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-trn=sample(1:nrow(pbc), round(nrow(pbc)*0.60))
-orsf=ORSF(data=pbc[trn,],ntree=1000,minsplit=30,tree.err=TRUE,verbose=FALSE)
+orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=F)
 #> 
 #> performing imputation with missForest:
 #>   missForest iteration 1 in progress...done!
@@ -52,44 +51,13 @@ orsf=ORSF(data=pbc[trn,],ntree=1000,minsplit=30,tree.err=TRUE,verbose=FALSE)
 #>   missForest iteration 6 in progress...done!
 #>   missForest iteration 7 in progress...done!
 
-test_concordance=pec::cindex(orsf,data=pbc[-trn,],
-                             formula = Surv(time,status)~1,
-                             eval.times=seq(0,3500,length.out=100))
-#> performing imputation with missForest:  missForest iteration 1 in progress...done!
-#>   missForest iteration 2 in progress...done!
-#>   missForest iteration 3 in progress...done!
-#>   missForest iteration 4 in progress...done!
-#>   missForest iteration 5 in progress...done!
-
-cerr=1-mean(test_concordance$AppCindex[[1]],na.rm=T)
-
-test_ibrierscore=pec::pec(orsf,data=pbc[-trn,],
-                          formula = Surv(time,status)~1,
-                          eval.times=seq(0,3500,length.out=100))
-#> No covariates  specified: Kaplan-Meier for censoring times used for weighting.
-#> performing imputation with missForest:  missForest iteration 1 in progress...done!
-#>   missForest iteration 2 in progress...done!
-#>   missForest iteration 3 in progress...done!
-#>   missForest iteration 4 in progress...done!
-#>   missForest iteration 5 in progress...done!
-
-perr=pec::crps(test_ibrierscore)[2]
-
 print(orsf)
 #> 
-#> Oblique Random Survival Forest: ORSF(data = pbc[trn, ], minsplit = 30, ntree = 1000, verbose = FALSE, 
-#>     tree.err = TRUE)
+#> Oblique Random Survival Forest: ORSF(data = pbc, minsplit = 30, ntree = 1000, verbose = F, tree.err = T)
 #> 
 #> Out of bag error estimates: (lower is better )
-#>   integrated Brier score: 0.12012 
-#>   integrated concordance: 0.16680
-cat('\nTest error estimates:',
-    '\n  integrated Brier score:',perr,
-    '\n  integrated concordance:', cerr)
-#> 
-#> Test error estimates: 
-#>   integrated Brier score: 0.1224525 
-#>   integrated concordance: 0.1407862
+#>   integrated Brier score: 0.11636 
+#>   integrated concordance: 0.15610
 
 labs=c("Concordance Index","Brier Score")
 
@@ -133,8 +101,9 @@ mdls=list(
                        data=pbc,penalty=1000)
 )
 
-set.seed(329) # for reproducibility
-# CAUTION: this will take ~45m to run
+# for reproducibility
+set.seed(329) 
+
 bri_score = pec::pec(mdls, data=pbc, cens.model = 'cox',
                      formula = Surv(time,status)~age, 
                      splitMethod = 'BootCv', B=10)
@@ -194,4 +163,59 @@ print(bri_score)
 #> rsf                  0.119
 #> cif                  0.118
 #> cboost               0.121
+
+
+cnc_index = pec::cindex(mdls, data=pbc, cens.model = 'cox',
+                        formula = Surv(time,status)~age, 
+                        splitMethod = 'BootCv', B=10)
+#> 1
+#> 2
+#> 3
+#> 4
+#> 5
+#> 6
+#> 7
+#> 8
+#> 9
+#> 10
+
+print(cnc_index)
+#> 
+#> The c-index for right censored event times
+#> 
+#> Prediction models:
+#> 
+#>   orsf    rsf    cif cboost 
+#>   orsf    rsf    cif cboost 
+#> 
+#> Right-censored response of a survival model
+#> 
+#> No.Observations: 276 
+#> 
+#> Pattern:
+#>                 Freq
+#>  event          111 
+#>  right.censored 165 
+#> 
+#> Censoring model for IPCW: cox model  
+#> 
+#> Method for estimating the prediction error:
+#> 
+#> Bootstrap cross-validation
+#> 
+#> Type: resampling
+#> Bootstrap sample size:  276 
+#> No. bootstrap samples:  10 
+#> Sample size:  276 
+#> 
+#> Estimated C-index in % at time=4191 
+#> 
+#>        AppCindex BootCvCindex
+#> orsf        85.3         80.3
+#> rsf         86.8         79.9
+#> cif         84.9         77.9
+#> cboost      79.3         78.3
+#> 
+#> AppCindex    : Apparent (training data) performance
+#> BootCvCindex : Bootstrap crossvalidated performance
 ```
