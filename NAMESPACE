@@ -3,6 +3,7 @@
 S3method(predict,orsf)
 S3method(predict,ost)
 S3method(predictSurvProb,orsf)
+S3method(print,orsf)
 export(ORSF)
 export(OST)
 importFrom(pec,predictSurvProb)

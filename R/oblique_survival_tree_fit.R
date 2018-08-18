@@ -30,10 +30,10 @@
 #'
 #' ost=OST(data=pbc, minsplit = 125)
 
-# data=pbc_impute
+# data=pbc%>%na.omit()
 # time='time'
 # status='status'
-# features=setdiff(names(pbc_impute),c('time','status'))
+# features=setdiff(names(data),c('time','status'))
 # verbose=TRUE
 # nmin=5
 # nsplit=10
@@ -46,6 +46,7 @@
 # boot_ids=NULL
 # data.preprocessed=FALSE
 # tree_lab=NULL
+# tree.err=TRUE
 
 OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
   nmin=5,nsplit=10,minsplit=30,mtry=ceiling(sqrt(ncol(data)-2)),nmin_leaf=1,
@@ -76,21 +77,22 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
   }
 
   if(!data.preprocessed){
+    
     data=data.table::data.table(data,key='orsf_id')
     boot_ids=unique(data$orsf_id)
+    
     if(is.factor(data[[status]])){
       data[[status]] = as.numeric(data[[status]])
     }
+    
     if(any(sort(unique(data[[status]]))!=c(0,1))){
 
       data[[status]][data[[status]]==min(data[[status]])]=0
       data[[status]][data[[status]]==max(data[[status]])]=1
 
     }
-  }
-
-
-
+  }  
+  
   if(is.null(features)){
     .ftrs = setdiff(names(data),c(time,status,'orsf_id'))
   } else {
@@ -148,7 +150,7 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
                 ~.+1,data=data[indx,split_candidates,with=FALSE]),
               survival::Surv(data[[time]][indx],data[[status]][indx]),
               family="cox", keep=FALSE, grouped=TRUE,
-              alpha=alpha, nfolds=min(5,nrows))))
+              alpha=alpha, nfolds=min(10,nrows)),silent = TRUE))
 
             if(is.error(fit)){
 
@@ -158,23 +160,30 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
             } else {
 
               if(any(fit$glmnet.fit$df>0)){
-                lambda.one<-
+                lambda.one<-suppressWarnings(
                   fit$glmnet.fit$lambda[min(which(fit$glmnet.fit$df>0))]
+                )
               } else {
                 lambda.one=NULL
               }
-
-              lambda.val<-
-                purrr::map_dbl((1:max(fit$glmnet.fit$df)),.f=function(x){
-                  fit$glmnet.fit$lambda[min(which(fit$glmnet.fit$df>=x))]})
-
-              lambda.val = lambda.val[lambda.val>=fit$lambda.min]
-              lambda.val = lambda.val[lambda.val<=fit$lambda.1se]
-
-              if(!is.null(lambda.one)) lambda.val = c(lambda.one,lambda.val)
-
+              
+              if(length(fit$glmnet.fit$df)>=2){
+                lambda.val<- suppressWarnings(
+                  purrr::map_dbl((1:max(fit$glmnet.fit$df)),.f=function(x){
+                    fit$glmnet.fit$lambda[min(which(fit$glmnet.fit$df>=x))]})
+                )
+                lambda.val = lambda.val[lambda.val>=fit$lambda.min]
+                lambda.val = lambda.val[lambda.val<=fit$lambda.1se]
+                
+                if(!is.null(lambda.one)) lambda.val = c(lambda.one,lambda.val)
+              } else {
+                if(!is.null(lambda.one)){
+                  lambda.val = c(lambda.one)
+                } else {
+                  class(fit)='try-error'
+                }
+              }
             }
-
           } else {
 
             if (is.null(maxdf_lincombo)) dfmax=5 else dfmax = maxdf_lincombo
@@ -193,9 +202,10 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
 
             } else {
 
-              lambda.val<-
+              lambda.val<-suppressWarnings(
                 purrr::map_dbl(1:dfmax,~fit$lambda[min(which(fit$df>=.))])
-
+              )
+              
             }
 
           }
@@ -231,6 +241,7 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
                 bvrs <- names(beta)[beta!=0]
                 bwts <- beta[beta!=0]
                 dmat[indx,bvrs] %*% matrix(bwts,ncol=1)
+                
               })
             }
 
@@ -321,7 +332,7 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
 
           }
 
-          if(sum(lwr)<nmin_leaf | sum(upr) < nmin_leaf |
+          if(sum(lwr)<nmin_leaf | sum(upr)<nmin_leaf |
              nodes[[current_node]]$dont_split){
 
             if(verbose) cat('M')
@@ -419,7 +430,7 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
   #purrr::map_dbl(times,~tmp$srv.surv[which.max(tmp$srv.time[tmp$srv.time<=.])])
 
   structure(
-    list(time           = time,
+    list(time          = time,
          status        = status,
          features      = .ftrs,
          nodes         = nodes,

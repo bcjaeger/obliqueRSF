@@ -61,15 +61,18 @@ ORSF <- function(data,
   Surv=function(...){
     survival::Surv(...)
   }
-
-
+  
+  if(ntree<20 & tree.err) stop('ntree should be >20 if tree.err is TRUE')
+  
+  
   missing_data <- apply(data,2,function(x) any(is.na(x)))
 
   if(any(missing_data)){
-    cat("performing imputation with missForest:")
+    cat("\nperforming imputation with missForest:\n")
     imp_data=missForest::missForest(xmis=data)
     data=imp_data$ximp
   }
+  
 
   data$orsf_id=1:nrow(data)
   data=data.table::data.table(data,key='orsf_id')
@@ -110,17 +113,11 @@ ORSF <- function(data,
                         mtry=mtry,
                         nmin_leaf=nmin_leaf,
                         alpha=alpha,
-                        boot_ids=inbd,
+                        boot_ids=inb,
                         verbose=verbose,
                         tree_lab=i,
                         data.preprocessed=TRUE),
       silent = FALSE)
-
-    # new_tree <- try(
-    #   OST(data=inbd,time=time,status=status,
-    #       boot_ids=inb,verbose=verbose,tree_lab=i,
-    #       data.preprocessed=TRUE,features=features),
-    #   silent = FALSE)
 
     if(class(new_tree)!='try-error'){
 
@@ -142,7 +139,7 @@ ORSF <- function(data,
   names(forest)=paste0('Tree',1:ntree)
 
   times=unique(sort(data[[time]][data[[status]]==1]))
-
+  
   oob_lst=purrr::map(forest,
                      predict,
                      newdata=data,
@@ -154,112 +151,140 @@ ORSF <- function(data,
   #     x$tree_node_membership %>% mutate(tree=y)
   #   }) %>%
   #   reduce(rbind)
-  #
-  # oob_lst <- purrr::map(internal_prds,.f=~.$pred_srv)
+  
+  forest_eval<-function(oob_lst,tree_num){
+    
+    if(verbose) cat('\nEvaluating predictions using', tree_num, 'trees')
+    
+    lst=do.call(cbind,oob_lst[1:tree_num])
+    arr=array(lst,dim=c(dim(oob_lst[[1]]),tree_num))
+    
+    oob_prd=apply(arr, c(1, 2), mean, na.rm = TRUE)
+    all_nan=apply(oob_prd,1,function(x) all(is.nan(x)))
+    
+    sfrm=stats::as.formula(paste0("Surv(",time,',',status,')~1'))
+    
+    oob_perr = suppressMessages(
+      pec::pec(oob_prd[!all_nan,],
+               data=data[!all_nan,],
+               times=times[-length(times)],
+               exact=FALSE,formula=sfrm,
+               cens.model="cox"))
+    
+    oob_perr=pec::crps(oob_perr)
+    oob_perr=oob_perr[2,1]
+    
+    oob_cstats = suppressMessages(
+      pec::cindex(oob_prd[!all_nan,],
+                  data = data[!all_nan,],
+                  eval.times=times,
+                  formula = sfrm,
+                  cens.model = 'cox'))
+    
+    oob_cstats=oob_cstats$AppCindex
+    oob_cstats=data.frame(cbind(oob_cstats[[1]],times))
+    names(oob_cstats)=c('cstat','time')
+    
+    oob_cerr = 1-with(oob_cstats,.integral(xvec=time,yvec=cstat))
+    
+    c(oob_perr=oob_perr,oob_cerr=oob_cerr)
+    
+  }
 
-  lst=do.call(cbind,oob_lst)
-  arr=array(lst,dim=c(dim(oob_lst[[1]]),length(oob_lst)))
-
-  oob_prd=apply(arr, c(1, 2), mean, na.rm = TRUE)
-  all_nan=apply(oob_prd,1,function(x) all(is.nan(x)))
-
-  sfrm=stats::as.formula(paste0("Surv(",time,',',status,')~1'))
-
-  oob_perr = suppressMessages(
-    pec::pec(oob_prd[!all_nan,],
-      data=data[!all_nan,],
-      times=times[-length(times)],
-      exact=FALSE,formula=sfrm,
-      cens.model="cox"))
-
-  oob_perr=pec::crps(oob_perr)
-  oob_perr=oob_perr[2,1]
-
-  oob_cstats = suppressMessages(
-    pec::cindex(oob_prd[!all_nan,],
-      data = data[!all_nan,],
-      eval.times=times,
-      formula = sfrm,
-      cens.model = 'cox'))
-
-  oob_cstats=oob_cstats$AppCindex
-  oob_cstats=data.frame(cbind(oob_cstats[[1]],times))
-  names(oob_cstats)=c('cstat','time')
-
-  oob_cerr = 1-with(oob_cstats,.integral(xvec=time,yvec=cstat))
-
-  # if(importance){
-  #
-  #   vimp = suppressWarnings(purrr::map(features,.f=function(v){
-  #
-  #     tmpF = forest
-  #
-  #     for(i in 1:length(tmpF)){
-  #       for(j in 1:length(tmpF[[i]]$nodes))
-  #       if('bvrs' %in% names(tmpF[[i]]$nodes[[j]])){
-  #         if(v %in% tmpF[[i]]$nodes[[j]]$bvrs){
-  #           tmpF[[i]]$nodes[[j]]$bwts[v]=0
-  #         }
-  #       }
-  #     }
-  #
-  #     oob_lst=purrr::map(tmpF, predict.internal_tree,newdata=data,times=times)
-  #     arr=oob_lst %>%
-  #       reduce(cbind)%>%
-  #       array(dim=c(dim(oob_lst[[1]]),length(oob_lst)))
-  #
-  #     oob_prd=apply(arr, c(1, 2), mean, na.rm = TRUE)
-  #     all_nan=apply(oob_prd,1,function(x) all(is.nan(x)))
-  #
-  #     sfrm=paste0("Surv(",time,',',status,')~1')%>%stats::as.formula()
-  #
-  #     shuffled_perr=suppressMessages(
-  #       pec::pec(oob_prd[!all_nan,],
-  #                data=data[!all_nan,],
-  #                times=times[-length(times)],
-  #                exact=FALSE,formula=sfrm,
-  #                cens.model="cox") %>%
-  #         pec::crps() %>% magrittr::extract(2,1))
-  #
-  #     shuffled_cerr = 1 - suppressMessages(
-  #       pec::cindex(oob_prd[!all_nan,],
-  #                   data = data[!all_nan,],
-  #                   eval.times=times,
-  #                   formula = sfrm,
-  #                   cens.model = 'cox')) %>%
-  #       use_series('AppCindex') %>%
-  #       magrittr::extract2(1) %>%
-  #       cbind(times) %>% data.frame() %>%
-  #       set_names(c('cstat','time')) %>%
-  #       mutate(diff=c(0,diff(time))) %>%
-  #       dplyr::summarise(sum(cstat*diff)/max(time)) %>%
-  #       as.numeric()
-  #
-  #     data.frame(ibris_vimp=shuffled_perr-oob_perr[length(oob_perr)],
-  #                cstat_vimp=shuffled_cerr-oob_cerr[length(oob_cerr)])
-  #
-  #   }) %>%
-  #     reduce(rbind) %>%
-  #     data.frame() %>%
-  #     set_names(c('ibris_vimp','cstat_vimp')) %>%
-  #     mutate(variable=pvars) %>%
-  #     left_join(elastic_importance,by='variable')) %>%
-  #     mutate(comb_vimp=scales::rescale(ibris_vimp,to=c(0,1))-1+elast_vimp) %>%
-  #     dplyr::arrange(desc(comb_vimp))
-  #
-  # } else {
-  #
-  #   vimp=NULL
-  #
-  # }
+  if(tree.err){
+    
+    eval_indx=seq(round(ntree/20),ntree,by=round(ntree/20))
+    tree_err=purrr::map(eval_indx,~forest_eval(oob_lst,tree_num=.))
+    tree_err=purrr::reduce(tree_err,rbind)
+    tree_err=data.frame(tree_err)
+    rownames(tree_err)=NULL
+    tree_err$trees=eval_indx
+    
+    oob_perr = tree_err$oob_perr[length(tree_err$oob_perr)]
+    oob_cerr = tree_err$oob_cerr[length(tree_err$oob_cerr)]
+    
+  } else {
+    
+    tree_err=forest_eval(oob_lst,ntree)
+    oob_perr = tree_err['oob_perr']
+    oob_cerr = tree_err['oob_cerr']
+    
+  }
+  
+  if(verbose) cat('\n')
 
   structure(
     list(forest = forest,
-      oob_perr = oob_perr,
-      oob_cerr = oob_cerr,
-      call = match.call()
+         tree_err= if(tree.err) tree_err else NULL,
+         oob_perr = oob_perr,
+         oob_cerr = oob_cerr,
+         call = match.call()
     ),
     class = "orsf")
 
 }
 
+# if(importance){
+#
+#   vimp = suppressWarnings(purrr::map(features,.f=function(v){
+#
+#     tmpF = forest
+#
+#     for(i in 1:length(tmpF)){
+#       for(j in 1:length(tmpF[[i]]$nodes))
+#       if('bvrs' %in% names(tmpF[[i]]$nodes[[j]])){
+#         if(v %in% tmpF[[i]]$nodes[[j]]$bvrs){
+#           tmpF[[i]]$nodes[[j]]$bwts[v]=0
+#         }
+#       }
+#     }
+#
+#     oob_lst=purrr::map(tmpF, predict.internal_tree,newdata=data,times=times)
+#     arr=oob_lst %>%
+#       reduce(cbind)%>%
+#       array(dim=c(dim(oob_lst[[1]]),length(oob_lst)))
+#
+#     oob_prd=apply(arr, c(1, 2), mean, na.rm = TRUE)
+#     all_nan=apply(oob_prd,1,function(x) all(is.nan(x)))
+#
+#     sfrm=paste0("Surv(",time,',',status,')~1')%>%stats::as.formula()
+#
+#     shuffled_perr=suppressMessages(
+#       pec::pec(oob_prd[!all_nan,],
+#                data=data[!all_nan,],
+#                times=times[-length(times)],
+#                exact=FALSE,formula=sfrm,
+#                cens.model="cox") %>%
+#         pec::crps() %>% magrittr::extract(2,1))
+#
+#     shuffled_cerr = 1 - suppressMessages(
+#       pec::cindex(oob_prd[!all_nan,],
+#                   data = data[!all_nan,],
+#                   eval.times=times,
+#                   formula = sfrm,
+#                   cens.model = 'cox')) %>%
+#       use_series('AppCindex') %>%
+#       magrittr::extract2(1) %>%
+#       cbind(times) %>% data.frame() %>%
+#       set_names(c('cstat','time')) %>%
+#       mutate(diff=c(0,diff(time))) %>%
+#       dplyr::summarise(sum(cstat*diff)/max(time)) %>%
+#       as.numeric()
+#
+#     data.frame(ibris_vimp=shuffled_perr-oob_perr[length(oob_perr)],
+#                cstat_vimp=shuffled_cerr-oob_cerr[length(oob_cerr)])
+#
+#   }) %>%
+#     reduce(rbind) %>%
+#     data.frame() %>%
+#     set_names(c('ibris_vimp','cstat_vimp')) %>%
+#     mutate(variable=pvars) %>%
+#     left_join(elastic_importance,by='variable')) %>%
+#     mutate(comb_vimp=scales::rescale(ibris_vimp,to=c(0,1))-1+elast_vimp) %>%
+#     dplyr::arrange(desc(comb_vimp))
+#
+# } else {
+#
+#   vimp=NULL
+#
+# }

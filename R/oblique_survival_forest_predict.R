@@ -23,7 +23,15 @@
 
 predict.orsf <- function(object, newdata, times, ...){
 
-  #newdata=randomForestSRC::impute(data=newdata,nodesize=10,nsplit=10,nimpute=5)
+  
+  newdata=data.table::data.table(newdata)
+  missing_data <- apply(newdata,2,function(x) any(is.na(x)))
+  
+  if(any(missing_data)){
+    cat("performing imputation with missForest:")
+    imp_data=missForest::missForest(xmis=newdata)
+    newdata=imp_data$ximp
+  }
 
   # apply the prediction function above to each survival tree in object
   lst = purrr::map(object$forest,

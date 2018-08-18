@@ -1,13 +1,27 @@
 ---
-title: "Oblique Random Survival Forests (ORSFs)"
-author: "Byron C. Jaeger, PhD."
-date: "August 16, 2018"
-output: html_document
+output: github_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+
+require(tidyverse,quietly=TRUE)
+require(party,quietly=TRUE)
+require(randomForestSRC,quietly=TRUE)
+require(pec,quietly=TRUE)
+require(survival,quietly=TRUE)
+require(CoxBoost,quietly=TRUE)
+require(obliqueRSF,quietly = TRUE)
+
 ```
+
+
 
 # Overview
 
@@ -15,30 +29,29 @@ Oblique random survival forest (ORSFs) are ensembles for right-censured survival
 
 # Installation
 
-```{r, eval=FALSE}
+You can install obliqueRSF from github with:
 
-# The obliqueRSF package can be installed from GitHub:
+```{r gh-installation, eval = FALSE}
 # install.packages("devtools")
 devtools::install_github("bcjaeger/obliqueRSF")
-
 ```
+
 
 # Usage
 
 The `ORSF` function is the center piece of the `obliqueRSF` package 
 
 
-```{r}
+```{r usage}
 
-library(survival)
-library(randomForestSRC)
-library(party)
-library(tidyverse)
-library(pec)
-library(obliqueRSF)
-
+# remove missings
 data("pbc",package='survival')
+
+# event is death
+# censored at time of last contact or transplant
 pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
+
+# format categorical variables as factors
 pbc = pbc %>% 
   dplyr::select(-id)%>%
   mutate(trt=factor(trt),
@@ -46,9 +59,79 @@ pbc = pbc %>%
          hepato=factor(hepato),
          spiders=factor(spiders),
          edema=factor(edema),
-         stage=factor(stage))%>%
-  na.omit()
+         stage=factor(stage,ordered=TRUE))
 
-orsf=ORSF(data=pbc,ntree=25,minsplit=100)
+set.seed(62689)
+trn=sample(1:nrow(pbc), round(nrow(pbc)*0.60))
+orsf=ORSF(data=pbc[trn,],ntree=1000,minsplit=30,tree.err=TRUE,verbose=FALSE)
+
+test_concordance=pec::cindex(orsf,data=pbc[-trn,],
+                             formula = Surv(time,status)~1,
+                             eval.times=seq(0,3500,length.out=100))
+
+cerr=1-mean(test_concordance$AppCindex[[1]],na.rm=T)
+
+test_ibrierscore=pec::pec(orsf,data=pbc[-trn,],
+                          formula = Surv(time,status)~1,
+                          eval.times=seq(0,3500,length.out=100))
+
+perr=pec::crps(test_ibrierscore)[2]
+
+print(orsf)
+cat('\nTest error estimates:',
+    '\n  integrated Brier score:',perr,
+    '\n  integrated concordance:', cerr)
+
+labs=c("Concordance Index","Brier Score")
+
+orsf$tree_err%>%
+  tidyr::gather(variable,value,-trees)%>%
+  mutate(variable=factor(variable,labels=labs))%>%
+  ggplot(aes(x=trees,y=value))+
+  geom_line(size=1)+
+  facet_wrap(~variable,scales='free')+
+  theme_bw()+theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(face='bold',size=12, color='black'),
+    axis.title = element_text(face='bold',size=12, color='black'),
+    strip.text = element_text(face='bold',size=12,color='black'))+
+    labs(x='Number of trees', y='Error')
 
 ```
+
+# Performance
+
+`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 50 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
+
+```{r performance}
+
+pbc=na.omit(pbc)
+
+ntree=500
+nsize=30
+
+cif_cntrl=cforest_unbiased(ntree=ntree,minsplit=nsize)
+
+mdls=list(
+  orsf=ORSF(data=pbc, verbose=FALSE, alpha=0.1,
+            ntree=ntree,minsplit=nsize),
+  rsf =rfsrc(Surv(time,status)~.,data=pbc,
+             ntree=ntree,nodesize=nsize),
+  cif =pec::pecCforest(Surv(time,status)~.,data=pbc, controls=cif_cntrl),
+  cboost = pec::coxboost(Hist(time,status)~.,
+                       data=pbc,penalty=1000)
+)
+
+set.seed(329) # for reproducibility
+# CAUTION: this will take ~45m to run
+bri_score = pec::pec(mdls, data=pbc, cens.model = 'cox',
+                     formula = Surv(time,status)~age, 
+                     splitMethod = 'BootCv', B=10)
+
+print(bri_score)
+
+
+```
+
+
+
