@@ -22,7 +22,7 @@ The `ORSF` function is the center piece of the `obliqueRSF` package
 
 ``` r
 
-# remove missings
+
 data("pbc",package='survival')
 
 # event is death
@@ -56,8 +56,8 @@ print(orsf)
 #> Oblique Random Survival Forest: ORSF(data = pbc, minsplit = 30, ntree = 1000, verbose = F, tree.err = T)
 #> 
 #> Out of bag error estimates: (lower is better )
-#>   integrated Brier score: 0.11636 
-#>   integrated concordance: 0.15610
+#>   integrated Brier score: 0.11688 
+#>   integrated concordance: 0.15609
 
 labs=c("Concordance Index","Brier Score")
 
@@ -77,10 +77,15 @@ orsf$tree_err%>%
 
 ![](README-usage-1.png)
 
+``` r
+
+nboots=10
+```
+
 Performance
 ===========
 
-`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 50 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
+`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 10 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
 
 ``` r
 
@@ -106,7 +111,7 @@ set.seed(329)
 
 bri_score = pec::pec(mdls, data=pbc, cens.model = 'cox',
                      formula = Surv(time,status)~age, 
-                     splitMethod = 'BootCv', B=10)
+                     splitMethod = 'BootCv', B=nboots)
 #> Split sample loop (B=10)
 #> Warning: executing %dopar% sequentially: no parallel backend registered
 #> 1
@@ -160,14 +165,14 @@ print(bri_score)
 #>           IBS[0;time=4500)
 #> Reference            0.183
 #> orsf                 0.113
-#> rsf                  0.119
-#> cif                  0.118
+#> rsf                  0.120
+#> cif                  0.119
 #> cboost               0.121
 
 
 cnc_index = pec::cindex(mdls, data=pbc, cens.model = 'cox',
                         formula = Surv(time,status)~age, 
-                        splitMethod = 'BootCv', B=10)
+                        splitMethod = 'BootCv', B=nboots)
 #> 1
 #> 2
 #> 3
@@ -211,10 +216,10 @@ print(cnc_index)
 #> Estimated C-index in % at time=4191 
 #> 
 #>        AppCindex BootCvCindex
-#> orsf        85.3         80.3
-#> rsf         86.8         79.9
-#> cif         84.9         77.9
-#> cboost      79.3         78.3
+#> orsf        85.4         81.7
+#> rsf         87.4         80.8
+#> cif         84.4         80.2
+#> cboost      79.5         80.1
 #> 
 #> AppCindex    : Apparent (training data) performance
 #> BootCvCindex : Bootstrap crossvalidated performance

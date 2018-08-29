@@ -62,7 +62,7 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=T)
+orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=F)
 
 print(orsf)
 
@@ -81,11 +81,13 @@ orsf$tree_err%>%
     strip.text = element_text(face='bold',size=12,color='black'))+
     labs(x='Number of trees', y='Error')
 
+nboots=10
+
 ```
 
 # Performance
 
-`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 50 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
+`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over `r nboots` replications of bootstrap cross validation using the complete cases in the `pbc` data set.
 
 ```{r performance}
 
@@ -111,14 +113,14 @@ set.seed(329)
 
 bri_score = pec::pec(mdls, data=pbc, cens.model = 'cox',
                      formula = Surv(time,status)~age, 
-                     splitMethod = 'BootCv', B=10)
+                     splitMethod = 'BootCv', B=nboots)
 
 print(bri_score)
 
 
 cnc_index = pec::cindex(mdls, data=pbc, cens.model = 'cox',
                         formula = Surv(time,status)~age, 
-                        splitMethod = 'BootCv', B=10)
+                        splitMethod = 'BootCv', B=nboots)
 
 print(cnc_index)
 
