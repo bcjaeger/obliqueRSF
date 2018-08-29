@@ -29,23 +29,20 @@ predict.orsf <- function(object, newdata, times, ...){
   
   if(any(missing_data)){
     cat("performing imputation with missForest:")
-    imp_data=missForest::missForest(xmis=newdata)
+    imp_data=suppressWarnings(missForest::missForest(xmis=newdata))
     newdata=imp_data$ximp
   }
+  
+  for(i in names(newdata)){
+    
+    ordered_fac = all(c("ordered", "factor")%in%class(newdata[[i]]))
+    if(ordered_fac) newdata[[i]]=as.numeric(newdata[[i]])
+    
+  }
 
-  # apply the prediction function above to each survival tree in object
-  lst = purrr::map(object$forest,
-    predict,
-    newdata=newdata,
-    times=times)
-
-  # create an array of prediction matrices for each tree
-  arr <- do.call(cbind, lst)
-  arr <- array(arr, dim=c(dim(lst[[1]]), length(lst)))
-
-  # average predictions over each tree,
-  # remove missing values as needed
-  apply(arr, c(1, 2), mean, na.rm = TRUE)
+  newx = stats::model.matrix(~.,data=newdata)[,-1L]
+  
+  predict_orsf(object$forest,newx=newx,times)
 
 }
 

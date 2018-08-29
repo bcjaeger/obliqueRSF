@@ -64,27 +64,29 @@ ORSF <- function(data,
   
   if(ntree<20 & tree.err) stop('ntree should be >20 if tree.err is TRUE')
   
-  
   missing_data <- apply(data,2,function(x) any(is.na(x)))
 
   if(any(missing_data)){
     cat("\nperforming imputation with missForest:\n")
-    imp_data=missForest::missForest(xmis=data)
+    imp_data=suppressWarnings(missForest::missForest(xmis=data))
     data=imp_data$ximp
   }
   
-
   data$orsf_id=1:nrow(data)
   data=data.table::data.table(data,key='orsf_id')
   boot_ids=unique(data$orsf_id)
+  
   if(is.factor(data[[status]])){
     data[[status]] = as.numeric(data[[status]])
   }
   if(any(sort(unique(data[[status]]))!=c(0,1))){
-
     data[[status]][data[[status]]==min(data[[status]])]=0
     data[[status]][data[[status]]==max(data[[status]])]=1
-
+  }
+  
+  for(i in names(data)){
+    ordered_fac = all(c("ordered", "factor")%in%class(data[[i]]))
+    if(ordered_fac) data[[i]]=as.numeric(data[[i]])
   }
 
   features = setdiff(names(data),c(time,status,'orsf_id'))
@@ -140,33 +142,25 @@ ORSF <- function(data,
 
   times=unique(sort(data[[time]][data[[status]]==1]))
   
-  oob_lst=purrr::map(forest,
-                     predict,
-                     newdata=data,
-                     times=times,
-                     internal=T)
-
-  # tree_membership <- internal_prds %>%
-  #   purrr::map2(1:ntree, .f=function(x,y){
-  #     x$tree_node_membership %>% mutate(tree=y)
-  #   }) %>%
-  #   reduce(rbind)
+  dmat = stats::model.matrix(~.,data=data)[,-1L]
   
-  forest_eval<-function(oob_lst,tree_num){
+  oob_prd = predict_orsf(forest=forest,
+                         newx=dmat,
+                         times=times)
+  
+  forest_eval<-function(tree_num){
     
     if(verbose) cat('\nEvaluating predictions using', tree_num, 'trees')
     
-    lst=do.call(cbind,oob_lst[1:tree_num])
-    arr=array(lst,dim=c(dim(oob_lst[[1]]),tree_num))
-    
-    oob_prd=apply(arr, c(1, 2), mean, na.rm = TRUE)
-    all_nan=apply(oob_prd,1,function(x) all(is.nan(x)))
+    oob_prd = predict_orsf(forest=forest[1:tree_num],
+                           newx=dmat,
+                           times=times)
     
     sfrm=stats::as.formula(paste0("Surv(",time,',',status,')~1'))
     
     oob_perr = suppressMessages(
-      pec::pec(oob_prd[!all_nan,],
-               data=data[!all_nan,],
+      pec::pec(oob_prd,
+               data=data,
                times=times[-length(times)],
                exact=FALSE,formula=sfrm,
                cens.model="cox"))
@@ -175,8 +169,8 @@ ORSF <- function(data,
     oob_perr=oob_perr[2,1]
     
     oob_cstats = suppressMessages(
-      pec::cindex(oob_prd[!all_nan,],
-                  data = data[!all_nan,],
+      pec::cindex(oob_prd,
+                  data = data,
                   eval.times=times,
                   formula = sfrm,
                   cens.model = 'cox'))
@@ -193,8 +187,8 @@ ORSF <- function(data,
 
   if(tree.err){
     
-    eval_indx=seq(10,ntree,by=10)
-    tree_err=purrr::map(eval_indx,~forest_eval(oob_lst,tree_num=.))
+    eval_indx=seq(15,ntree,by=5)
+    tree_err=purrr::map(eval_indx,~forest_eval(tree_num=.))
     tree_err=purrr::reduce(tree_err,rbind)
     tree_err=data.frame(tree_err)
     rownames(tree_err)=NULL
@@ -205,7 +199,7 @@ ORSF <- function(data,
     
   } else {
     
-    tree_err=forest_eval(oob_lst,ntree)
+    tree_err=forest_eval(ntree)
     oob_perr = tree_err['oob_perr']
     oob_cerr = tree_err['oob_cerr']
     

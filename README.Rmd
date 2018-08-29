@@ -44,7 +44,7 @@ The `ORSF` function is the center piece of the `obliqueRSF` package
 
 ```{r usage, fig.width=14,fig.height=7}
 
-# remove missings
+
 data("pbc",package='survival')
 
 # event is death
@@ -62,7 +62,7 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=F)
+orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=T)
 
 print(orsf)
 

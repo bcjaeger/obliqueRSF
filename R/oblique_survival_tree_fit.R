@@ -30,7 +30,7 @@
 #'
 #' ost=OST(data=pbc, minsplit = 125)
 
-# data=pbc%>%na.omit()
+# data=pbc
 # time='time'
 # status='status'
 # features=setdiff(names(data),c('time','status'))
@@ -403,7 +403,9 @@ OST <- function(data, time='time', status='status',features=NULL,verbose=TRUE,
 
     if(!is.error(srv)){
 
-      nodes[[current_leaf]]$srv=stats::stepfun(srv$time,c(1,srv$surv))
+      nodes[[current_leaf]]$times=srv$time
+      nodes[[current_leaf]]$probs=srv$surv
+      
       nodes[[current_leaf]]$nevents=sum(srv$n.event)
       nodes[[current_leaf]]$ncensrd=sum(srv$n.censor)
 
