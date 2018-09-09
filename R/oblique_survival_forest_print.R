@@ -21,10 +21,6 @@
 print.orsf <- function(x,...){
   cat('\nOblique Random Survival Forest: ')
   print(x$call)
-  cat('\nOut of bag error estimates: (lower is better )\n')
-  cat('  integrated Brier score:', 
-      format(round(x$oob_perr[length(x$oob_perr)],5),nsmall=5),'\n')
-  cat('  integrated concordance:', 
-      format(round(x$oob_cerr[length(x$oob_cerr)],5),nsmall=5),'\n')
+  print(x$oob_error)
   
 }

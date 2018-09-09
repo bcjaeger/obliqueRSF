@@ -1,21 +1,22 @@
 
 #' Grow an oblique random survival forest (ORSF)
 #' @param data The data used to grow the forest.
+#' @param alpha The elastic net mixing parameter. A value of 1 gives the lasso penalty, and a value of 0 gives the ridge penalty. If multiple values of alpha are given, then a penalized model is fit using each alpha value prior to splitting a node.
+#' @param ntree The number of trees to grow.
 #' @param time A character value indicating the name of the column in the data that measures time.
 #' @param status A character value indicating the name of the column in the data that measures participant status. A value of zero indicates censoring and a value of 1 indicates that the event occurred.
 #' @param features A character vector giving the names of columns in the data set that will be used as features. If NULL, then all of the variables in the data apart from the time and status variable are treated as features. None of these names should contain special characters or spaces.
-#' @param verbose If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.
-#' @param ntree The number of trees to grow.
-#' @param nmin The minimum number of events required to split a node.
+#' @param min_events_to_split_node The minimum number of events required to split a node.
+#' @param min_obs_to_split_node The minimum number of observations required to split a node.
+#' @param min_obs_in_leaf_node The minimum number of observations in child nodes.
+#' @param min_events_in_leaf_node The minimum number of events in child nodes.
 #' @param nsplit The number of random cut-points assessed for each variable.
-#' @param minsplit The minimum number of observations required to split a node.
-#' @param mtry Number of variables randomly selected as candidates for splitting a node. The default is ceiling(sqrt(p)), where p is the number of features.
+#' @param min_lrstat_to_split_node The minimum log-rank statistic required to split a node. The default value of 3.84 corresponds to a p-value of roughly 0.05 or lower.
+#' @param mtry Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.
 #' @param nmin_leaf The minimum number of events required for a leaf node.
-#' @param alpha The elastic net mixing parameter. A value of 1 gives the lasso penalty, and a value of 0 gives the ridge penalty.
-#' @param use.cv if TRUE, then cross-validation is used prior to splitting each node in order to identify optimal values of lambda, a hyper-parameter in penalized regression.
-#' @param maxdf_lincombo This argument is ignored if cross-validation is applied, i.e. if use.cv=TRUE. The maximum number of degrees of freedom used by penalized regression models.
-#' @param tree.err (Not yet implemented) if TRUE, then out-of-bag error is computed after each new tree is grown.
-#' @param importance (Not yet implemented) if TRUE, variable importance is computed using axis based random survival forests.
+#' @param use.cv if TRUE, cross-validation is used to identify optimal values of lambda, a hyper-parameter in penalized regression. if FALSE, a set of candidate lambda values are used. The set of candidate lambda values is built by picking the maximum value of lambda such that the penalized regression model has k degrees of freedom, where k is between 1 and mtry. 
+#' @param verbose If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.
+#' @param random_seed If a number is given, then that number is used as a random seed prior to growing the forest. Use this seed to replicate a forest if needed.  
 #' @return An oblique random survival forest.
 #' @export
 #' @examples
@@ -29,40 +30,30 @@
 #'
 #' orsf=ORSF(data=pbc,ntree=15,minsplit=75)
 
-
 ORSF <- function(data,
+                 alpha=0.01,
+                 ntree=100,
                  time='time',
                  status='status',
                  features=NULL,
-                 nmin=5,
+                 min_events_to_split_node=10,
+                 min_obs_to_split_node=10,
+                 min_obs_in_leaf_node=3,
+                 min_events_in_leaf_node=10,
                  nsplit=10,
-                 minsplit=30,
+                 min_lrstat_to_split_node=3.84,
                  mtry=ceiling(sqrt(ncol(data)-2)),
-                 nmin_leaf=1,
-                 alpha=0.01,
-                 use.cv=TRUE,
-                 maxdf_lincombo=if(use.cv) NULL else 5,
-                 ntree=100,
+                 use.cv=FALSE,
                  verbose=TRUE,
-                 importance=FALSE,
-                 tree.err = FALSE){
+                 random_seed=NULL){
 
-  .integral <- function(xvec,yvec){
-    integral=stats::integrate(stats::approxfun(xvec,yvec),
-                       min(xvec),max(xvec),
-                       subdivisions=2000)
-    integral$value / (max(xvec)-min(xvec))
-  }
-
-  Hist=function(...){
-    prodlim::Hist(...)
-  }
-
-  Surv=function(...){
-    survival::Surv(...)
-  }
-  
-  if(ntree<20 & tree.err) stop('ntree should be >20 if tree.err is TRUE')
+  # Hist=function(...){
+  #   prodlim::Hist(...)
+  # }
+  # 
+  # Surv=function(...){
+  #   survival::Surv(...)
+  # }
   
   missing_data <- apply(data,2,function(x) any(is.na(x)))
 
@@ -72,13 +63,10 @@ ORSF <- function(data,
     data=imp_data$ximp
   }
   
-  data$orsf_id=1:nrow(data)
-  data=data.table::data.table(data,key='orsf_id')
-  boot_ids=unique(data$orsf_id)
-  
   if(is.factor(data[[status]])){
     data[[status]] = as.numeric(data[[status]])
   }
+  
   if(any(sort(unique(data[[status]]))!=c(0,1))){
     data[[status]][data[[status]]==min(data[[status]])]=0
     data[[status]][data[[status]]==max(data[[status]])]=1
@@ -88,197 +76,135 @@ ORSF <- function(data,
     ordered_fac = all(c("ordered", "factor")%in%class(data[[i]]))
     if(ordered_fac) data[[i]]=as.numeric(data[[i]])
   }
-
-  features = setdiff(names(data),c(time,status,'orsf_id'))
-  forest = vector(mode='list',length=ntree); i = 1; error_count=0
-
-  while(i <= ntree){
-
-    if(error_count>5) stop('Too many lumberjacks')
-
-    if(verbose){
-      cat('\n Growing tree no.', i, '.')
-    }
-
-    inb = sample(data$orsf_id, nrow(data), replace=TRUE)
-    oob = setdiff(data$orsf_id,inb)
-    inbd = data[inb,]
-    oobd = data[oob,]
-
-    new_tree <- try(OST(data=inbd,
-                        time=time,
-                        status=status,
-                        features=features,
-                        nmin=nmin,
-                        nsplit=nsplit,
-                        minsplit=minsplit,
-                        mtry=mtry,
-                        nmin_leaf=nmin_leaf,
-                        alpha=alpha,
-                        boot_ids=inb,
-                        verbose=verbose,
-                        tree_lab=i,
-                        data.preprocessed=TRUE),
-      silent = FALSE)
-
-    if(class(new_tree)!='try-error'){
-
-      if(length(new_tree$nodes)>=3){
-
-        forest[[i]]=new_tree; i=i+1
-
-      }
-
-      if(verbose) cat('| done |', length(new_tree$nodes), 'nodes grown')
-
+  
+  if(is.null(features)){
+    features = setdiff(names(data),c(time,status))
+  } 
+  
+  #dmat=data.matrix(data[,features])
+  dmat=model.matrix(~.,data=data[,features])[,-1L]
+  time=data$time
+  status=data$status
+  orsf_ids=1:nrow(data)
+  
+  lrtestR <- function(time,grp,status){
+    fit=survival:::survdiff.fit(y=Surv(time,status),x=grp)
+    if (any(fit$expected==0)){
+      0
     } else {
-      # lumberjacks!
-      error_count<-error_count+1
+      tmp <- ((fit$observed - fit$expected))[-1]
+      sum(solve((fit$var)[-1, -1, drop = FALSE], tmp) * tmp)
     }
-
   }
-
-  names(forest)=paste0('Tree',1:ntree)
-
-  times=unique(sort(data[[time]][data[[status]]==1]))
   
-  dmat = stats::model.matrix(~.,data=data)[,-1L]
-  
-  oob_prd = predict_orsf(forest=forest,
-                         newx=dmat,
-                         times=times)
-  
-  forest_eval<-function(tree_num){
-    
-    if(verbose) cat('\nEvaluating predictions using', tree_num, 'trees')
-    
-    oob_prd = predict_orsf(forest=forest[1:tree_num],
-                           newx=dmat,
-                           times=times)
-    
-    sfrm=stats::as.formula(paste0("Surv(",time,',',status,')~1'))
-    
-    oob_perr = suppressMessages(
-      pec::pec(oob_prd,
-               data=data,
-               times=times[-length(times)],
-               exact=FALSE,formula=sfrm,
-               cens.model="cox"))
-    
-    oob_perr=pec::crps(oob_perr)
-    oob_perr=oob_perr[2,1]
-    
-    oob_cstats = suppressMessages(
-      pec::cindex(oob_prd,
-                  data = data,
-                  eval.times=times,
-                  formula = sfrm,
-                  cens.model = 'cox'))
-    
-    oob_cstats=oob_cstats$AppCindex
-    oob_cstats=data.frame(cbind(oob_cstats[[1]],times))
-    names(oob_cstats)=c('cstat','time')
-    
-    oob_cerr = 1-with(oob_cstats,.integral(xvec=time,yvec=cstat))
-    
-    c(oob_perr=oob_perr,oob_cerr=oob_cerr)
-    
+  srvR <- function(time_indx, status_indx){
+    s=survival::survfit(
+      survival::Surv(time_indx, status_indx) ~ 1,
+      type = "kaplan-meier",se.fit=FALSE)
+    list(times=s$time,
+         probs=s$surv)
   }
-
-  if(tree.err){
+  
+  bootR <- function(mat,time,status,inb){
+    inb=inb+1
+    list(mat=mat[inb,],
+         time=time[inb],
+         status=status[inb])
+  }
+  
+  netR <- function(dmat,time,status,indx,cols,mtry,alpha){
     
-    eval_indx=seq(15,ntree,by=5)
-    tree_err=purrr::map(eval_indx,~forest_eval(tree_num=.))
-    tree_err=purrr::reduce(tree_err,rbind)
-    tree_err=data.frame(tree_err)
-    rownames(tree_err)=NULL
-    tree_err$trees=eval_indx
+    indx=indx+1
+    cols=cols+1
     
-    oob_perr = tree_err$oob_perr[length(tree_err$oob_perr)]
-    oob_cerr = tree_err$oob_cerr[length(tree_err$oob_cerr)]
+    out = purrr::map(alpha, .f=function(a){
+      fit <- suppressWarnings(glmnet::glmnet(
+        dmat[indx,cols],
+        survival::Surv(time[indx],status[indx]),
+        family="cox",
+        alpha=a,
+        dfmax=mtry))
+      dfs=unique(fit$df)
+      dfs=dfs[dfs>=1]
+      if(length(dfs)>=1){
+        out_indx=sapply(dfs, function(s) min(which(fit$df==s)))
+        as.matrix(fit$beta[,out_indx])
+      } else {
+        matrix(rep(0,mtry),ncol=1)
+      }
+    }) 
     
-  } else {
-    
-    tree_err=forest_eval(ntree)
-    oob_perr = tree_err['oob_perr']
-    oob_cerr = tree_err['oob_cerr']
+    purrr::reduce(out, cbind)
     
   }
   
-  if(verbose) cat('\n')
-
+  cv.netR <- function(dmat,time,status,indx,cols,mtry,alpha){
+    indx=indx+1
+    cols=cols+1
+    out = purrr::map(alpha, .f=function(a){
+      cv.fit <- suppressWarnings(glmnet::cv.glmnet(
+        dmat[indx,cols],
+        survival::Surv(time[indx],status[indx]),
+        family="cox", keep = FALSE, grouped = TRUE,
+        alpha=a, nfolds=min(10,length(indx)), dfmax=mtry))
+      as.matrix(cbind(
+        coef(cv.fit,'lambda.1se'),
+        coef(cv.fit,'lambda.min')
+      ))
+    })
+    purrr::reduce(out, cbind)
+  }
+  
+  
+  fevalR <- function(prd,time,status,eval.times){
+    
+    ntimes=length(eval.times)
+    conc=pec::cindex(matrix(prd[,ntimes],ncol=1),
+                     formula=Surv(time,status)~1,
+                     eval.times=eval.times[ntimes],
+                     data=data.frame(time=time,status=status))
+    
+    conc=conc$AppCindex$matrix
+    
+    intbs=suppressMessages(pec::crps(pec::pec(
+      list(ORSF=prd),times=eval.times,exact=F,
+      start=eval.times[1],
+      formula=Surv(time,status)~1,
+      data=data.frame(time=time,status=status))))
+    
+    list(concordance=conc,integrated_briscr=intbs)
+    
+  }
+  
+  if(!is.null(random_seed)){
+    set.seed(random_seed)
+  }
+  
+  orsf=ORSFcpp(dmat=dmat,
+               features=colnames(dmat),
+               alpha=alpha,
+               time=time,
+               status=status,
+               min_events_to_split_node=min_events_to_split_node,
+               min_obs_to_split_node=min_obs_to_split_node,
+               min_obs_in_leaf_node=min_obs_in_leaf_node,
+               min_events_in_leaf_node=min_events_in_leaf_node,
+               mtry=mtry,
+               nsplit=nsplit,
+               ntree=ntree,
+               mincriterion=min_lrstat_to_split_node,
+               verbose=verbose,
+               split_eval_Rfun=lrtestR,
+               surv_KM_Rfun=srvR,
+               bootstrap_Rfun=bootR,
+               glmnet_Rfun=if(use.cv){cv.netR} else {netR},
+               forest_eval_Rfun=fevalR)
+  
   structure(
-    list(forest = forest,
-         tree_err= if(tree.err) tree_err else NULL,
-         oob_perr = oob_perr,
-         oob_cerr = oob_cerr,
-         call = match.call()
-    ),
+    list(forest = orsf$forest,
+         oob_error = orsf$oob_error,
+         call = match.call()),
     class = "orsf")
-
+  
 }
 
-# if(importance){
-#
-#   vimp = suppressWarnings(purrr::map(features,.f=function(v){
-#
-#     tmpF = forest
-#
-#     for(i in 1:length(tmpF)){
-#       for(j in 1:length(tmpF[[i]]$nodes))
-#       if('bvrs' %in% names(tmpF[[i]]$nodes[[j]])){
-#         if(v %in% tmpF[[i]]$nodes[[j]]$bvrs){
-#           tmpF[[i]]$nodes[[j]]$bwts[v]=0
-#         }
-#       }
-#     }
-#
-#     oob_lst=purrr::map(tmpF, predict.internal_tree,newdata=data,times=times)
-#     arr=oob_lst %>%
-#       reduce(cbind)%>%
-#       array(dim=c(dim(oob_lst[[1]]),length(oob_lst)))
-#
-#     oob_prd=apply(arr, c(1, 2), mean, na.rm = TRUE)
-#     all_nan=apply(oob_prd,1,function(x) all(is.nan(x)))
-#
-#     sfrm=paste0("Surv(",time,',',status,')~1')%>%stats::as.formula()
-#
-#     shuffled_perr=suppressMessages(
-#       pec::pec(oob_prd[!all_nan,],
-#                data=data[!all_nan,],
-#                times=times[-length(times)],
-#                exact=FALSE,formula=sfrm,
-#                cens.model="cox") %>%
-#         pec::crps() %>% magrittr::extract(2,1))
-#
-#     shuffled_cerr = 1 - suppressMessages(
-#       pec::cindex(oob_prd[!all_nan,],
-#                   data = data[!all_nan,],
-#                   eval.times=times,
-#                   formula = sfrm,
-#                   cens.model = 'cox')) %>%
-#       use_series('AppCindex') %>%
-#       magrittr::extract2(1) %>%
-#       cbind(times) %>% data.frame() %>%
-#       set_names(c('cstat','time')) %>%
-#       mutate(diff=c(0,diff(time))) %>%
-#       dplyr::summarise(sum(cstat*diff)/max(time)) %>%
-#       as.numeric()
-#
-#     data.frame(ibris_vimp=shuffled_perr-oob_perr[length(oob_perr)],
-#                cstat_vimp=shuffled_cerr-oob_cerr[length(oob_cerr)])
-#
-#   }) %>%
-#     reduce(rbind) %>%
-#     data.frame() %>%
-#     set_names(c('ibris_vimp','cstat_vimp')) %>%
-#     mutate(variable=pvars) %>%
-#     left_join(elastic_importance,by='variable')) %>%
-#     mutate(comb_vimp=scales::rescale(ibris_vimp,to=c(0,1))-1+elast_vimp) %>%
-#     dplyr::arrange(desc(comb_vimp))
-#
-# } else {
-#
-#   vimp=NULL
-#
-# }

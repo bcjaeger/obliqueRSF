@@ -4,15 +4,19 @@
 \alias{ORSF}
 \title{Grow an oblique random survival forest (ORSF)}
 \usage{
-ORSF(data, time = "time", status = "status", features = NULL,
-  nmin = 5, nsplit = 10, minsplit = 30,
-  mtry = ceiling(sqrt(ncol(data) - 2)), nmin_leaf = 1, alpha = 0.01,
-  use.cv = TRUE, maxdf_lincombo = if (use.cv) NULL else 5,
-  ntree = 100, verbose = TRUE, importance = FALSE,
-  tree.err = FALSE)
+ORSF(data, alpha = 0.01, ntree = 100, time = "time",
+  status = "status", features = NULL, min_events_to_split_node = 10,
+  min_obs_to_split_node = 10, min_obs_in_leaf_node = 3,
+  min_events_in_leaf_node = 10, nsplit = 10,
+  min_lrstat_to_split_node = 3.84, mtry = ceiling(sqrt(ncol(data) -
+  2)), use.cv = FALSE, verbose = TRUE, random_seed = NULL)
 }
 \arguments{
 \item{data}{The data used to grow the forest.}
+
+\item{alpha}{The elastic net mixing parameter. A value of 1 gives the lasso penalty, and a value of 0 gives the ridge penalty. If multiple values of alpha are given, then a penalized model is fit using each alpha value prior to splitting a node.}
+
+\item{ntree}{The number of trees to grow.}
 
 \item{time}{A character value indicating the name of the column in the data that measures time.}
 
@@ -20,29 +24,27 @@ ORSF(data, time = "time", status = "status", features = NULL,
 
 \item{features}{A character vector giving the names of columns in the data set that will be used as features. If NULL, then all of the variables in the data apart from the time and status variable are treated as features. None of these names should contain special characters or spaces.}
 
-\item{nmin}{The minimum number of events required to split a node.}
+\item{min_events_to_split_node}{The minimum number of events required to split a node.}
+
+\item{min_obs_to_split_node}{The minimum number of observations required to split a node.}
+
+\item{min_obs_in_leaf_node}{The minimum number of observations in child nodes.}
+
+\item{min_events_in_leaf_node}{The minimum number of events in child nodes.}
 
 \item{nsplit}{The number of random cut-points assessed for each variable.}
 
-\item{minsplit}{The minimum number of observations required to split a node.}
+\item{min_lrstat_to_split_node}{The minimum log-rank statistic required to split a node. The default value of 3.84 corresponds to a p-value of roughly 0.05 or lower.}
 
-\item{mtry}{Number of variables randomly selected as candidates for splitting a node. The default is ceiling(sqrt(p)), where p is the number of features.}
+\item{mtry}{Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.}
 
-\item{nmin_leaf}{The minimum number of events required for a leaf node.}
-
-\item{alpha}{The elastic net mixing parameter. A value of 1 gives the lasso penalty, and a value of 0 gives the ridge penalty.}
-
-\item{use.cv}{if TRUE, then cross-validation is used prior to splitting each node in order to identify optimal values of lambda, a hyper-parameter in penalized regression.}
-
-\item{maxdf_lincombo}{This argument is ignored if cross-validation is applied, i.e. if use.cv=TRUE. The maximum number of degrees of freedom used by penalized regression models.}
-
-\item{ntree}{The number of trees to grow.}
+\item{use.cv}{if TRUE, cross-validation is used to identify optimal values of lambda, a hyper-parameter in penalized regression. if FALSE, a set of candidate lambda values are used. The set of candidate lambda values is built by picking the maximum value of lambda such that the penalized regression model has k degrees of freedom, where k is between 1 and mtry.}
 
 \item{verbose}{If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.}
 
-\item{importance}{(Not yet implemented) if TRUE, variable importance is computed using axis based random survival forests.}
+\item{random_seed}{If a number is given, then that number is used as a random seed prior to growing the forest. Use this seed to replicate a forest if needed.}
 
-\item{tree.err}{(Not yet implemented) if TRUE, then out-of-bag error is computed after each new tree is grown.}
+\item{nmin_leaf}{The minimum number of events required for a leaf node.}
 }
 \value{
 An oblique random survival forest.

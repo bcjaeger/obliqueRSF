@@ -24,7 +24,6 @@
 predict.orsf <- function(object, newdata, times, ...){
 
   
-  newdata=data.table::data.table(newdata)
   missing_data <- apply(newdata,2,function(x) any(is.na(x)))
   
   if(any(missing_data)){

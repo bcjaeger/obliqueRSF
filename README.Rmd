@@ -62,7 +62,7 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=F)
+orsf=ORSF(data=pbc, ntree=1000, use.cv = FALSE)
 
 print(orsf)
 
