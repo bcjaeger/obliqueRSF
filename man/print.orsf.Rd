@@ -26,7 +26,6 @@ fctrs<-c('trt','ascites','spiders','edema','hepato','stage')
 for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 pbc=na.omit(pbc)
 
-orsf=ORSF(data=pbc,ntree=15,minsplit=75)
+orsf=ORSF(data=pbc)
 print(orsf)
-
 }

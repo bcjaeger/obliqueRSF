@@ -42,7 +42,7 @@ devtools::install_github("bcjaeger/obliqueRSF")
 The `ORSF` function is the center piece of the `obliqueRSF` package 
 
 
-```{r usage, fig.width=14,fig.height=7}
+```{r usage, echo=TRUE}
 
 
 data("pbc",package='survival')
@@ -62,26 +62,10 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-orsf=ORSF(data=pbc, ntree=1000, use.cv = FALSE)
+orsf=ORSF(data=pbc, ntree=100, alpha=0.01,verbose=FALSE)
 
 print(orsf)
-
-labs=c("Concordance Index","Brier Score")
-
-orsf$tree_err%>%
-  tidyr::gather(variable,value,-trees)%>%
-  mutate(variable=factor(variable,labels=labs))%>%
-  ggplot(aes(x=trees,y=value))+
-  geom_line(size=1)+
-  facet_wrap(~variable,scales='free')+
-  theme_bw()+theme(
-    panel.grid = element_blank(),
-    axis.text = element_text(face='bold',size=12, color='black'),
-    axis.title = element_text(face='bold',size=12, color='black'),
-    strip.text = element_text(face='bold',size=12,color='black'))+
-    labs(x='Number of trees', y='Error')
-
-nboots=10
+nboots=25
 
 ```
 
@@ -91,34 +75,32 @@ nboots=10
 
 ```{r performance}
 
-pbc=na.omit(pbc)
+pbc_cmp=na.omit(pbc)
 
-ntree=500
-nsize=30
-
-cif_cntrl=cforest_unbiased(ntree=ntree,minsplit=nsize)
+ntree=300
+nsize=20
 
 mdls=list(
-  orsf=ORSF(data=pbc, verbose=FALSE, alpha=0.1,
-            ntree=ntree,minsplit=nsize),
-  rsf =rfsrc(Surv(time,status)~.,data=pbc,
+  orsf=ORSF(data=pbc_cmp, ntree=ntree, use.cv = FALSE, 
+            min_obs_to_split_node = nsize, verbose=FALSE),
+  rsf =rfsrc(Surv(time,status)~.,data=pbc_cmp,
              ntree=ntree,nodesize=nsize),
-  cif =pec::pecCforest(Surv(time,status)~.,data=pbc, controls=cif_cntrl),
+  bws = pec::selectCox(Surv(time,status)~., data=pbc_cmp),
   cboost = pec::coxboost(Hist(time,status)~.,
-                       data=pbc,penalty=1000)
+                       data=pbc_cmp,penalty=1000)
 )
 
 # for reproducibility
-set.seed(329) 
+set.seed(32989) 
 
-bri_score = pec::pec(mdls, data=pbc, cens.model = 'cox',
+bri_score = pec::pec(mdls, data=pbc_cmp, cens.model = 'cox',
                      formula = Surv(time,status)~age, 
                      splitMethod = 'BootCv', B=nboots)
 
 print(bri_score)
 
 
-cnc_index = pec::cindex(mdls, data=pbc, cens.model = 'cox',
+cnc_index = pec::cindex(mdls, data=pbc_cmp, cens.model = 'cox',
                         formula = Surv(time,status)~age, 
                         splitMethod = 'BootCv', B=nboots)
 

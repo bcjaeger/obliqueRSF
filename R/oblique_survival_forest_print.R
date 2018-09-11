@@ -14,9 +14,8 @@
 #' for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 #' pbc=na.omit(pbc)
 #'
-#' orsf=ORSF(data=pbc,ntree=15,minsplit=75)
+#' orsf=ORSF(data=pbc)
 #' print(orsf)
-#' 
 
 print.orsf <- function(x,...){
   cat('\nOblique Random Survival Forest: ')

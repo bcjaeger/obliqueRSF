@@ -13,7 +13,6 @@
 #' @param nsplit The number of random cut-points assessed for each variable.
 #' @param min_lrstat_to_split_node The minimum log-rank statistic required to split a node. The default value of 3.84 corresponds to a p-value of roughly 0.05 or lower.
 #' @param mtry Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.
-#' @param nmin_leaf The minimum number of events required for a leaf node.
 #' @param use.cv if TRUE, cross-validation is used to identify optimal values of lambda, a hyper-parameter in penalized regression. if FALSE, a set of candidate lambda values are used. The set of candidate lambda values is built by picking the maximum value of lambda such that the penalized regression model has k degrees of freedom, where k is between 1 and mtry. 
 #' @param verbose If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.
 #' @param random_seed If a number is given, then that number is used as a random seed prior to growing the forest. Use this seed to replicate a forest if needed.  
@@ -28,7 +27,7 @@
 #' for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 #' pbc=na.omit(pbc)
 #'
-#' orsf=ORSF(data=pbc,ntree=15,minsplit=75)
+#' orsf=ORSF(data=pbc)
 
 ORSF <- function(data,
                  alpha=0.01,
@@ -87,7 +86,11 @@ ORSF <- function(data,
   status=data$status
   orsf_ids=1:nrow(data)
   
+  
+  
+  
   lrtestR <- function(time,grp,status){
+    
     fit=survival:::survdiff.fit(y=Surv(time,status),x=grp)
     if (any(fit$expected==0)){
       0
