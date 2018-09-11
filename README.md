@@ -40,7 +40,7 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=F)
+orsf=ORSF(data=pbc, ntree=100, alpha=0.01,verbose=FALSE)
 #> 
 #> performing imputation with missForest:
 #>   missForest iteration 1 in progress...done!
@@ -53,77 +53,56 @@ orsf=ORSF(data=pbc,ntree=1000,minsplit=30,tree.err=T,verbose=F)
 
 print(orsf)
 #> 
-#> Oblique Random Survival Forest: ORSF(data = pbc, minsplit = 30, ntree = 1000, verbose = F, tree.err = T)
+#> Oblique Random Survival Forest: ORSF(data = pbc, alpha = 0.01, ntree = 100, verbose = FALSE)
+#> $concordance
+#> [1] 0.7979088
 #> 
-#> Out of bag error estimates: (lower is better )
-#>   integrated Brier score: 0.11688 
-#>   integrated concordance: 0.15609
-
-labs=c("Concordance Index","Brier Score")
-
-orsf$tree_err%>%
-  tidyr::gather(variable,value,-trees)%>%
-  mutate(variable=factor(variable,labels=labs))%>%
-  ggplot(aes(x=trees,y=value))+
-  geom_line(size=1)+
-  facet_wrap(~variable,scales='free')+
-  theme_bw()+theme(
-    panel.grid = element_blank(),
-    axis.text = element_text(face='bold',size=12, color='black'),
-    axis.title = element_text(face='bold',size=12, color='black'),
-    strip.text = element_text(face='bold',size=12,color='black'))+
-    labs(x='Number of trees', y='Error')
-```
-
-![](README-usage-1.png)
-
-``` r
-
-nboots=10
+#> $integrated_briscr
+#> 
+#> Integrated Brier score (crps):
+#> 
+#>           IBS[0;time=4795)
+#> Reference            0.174
+#> ORSF                 0.104
+nboots=25
 ```
 
 Performance
 ===========
 
-`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 10 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
+`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 25 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
 
 ``` r
 
-pbc=na.omit(pbc)
+pbc_cmp=na.omit(pbc)
 
-ntree=500
-nsize=30
-
-cif_cntrl=cforest_unbiased(ntree=ntree,minsplit=nsize)
+ntree=300
+nsize=20
 
 mdls=list(
-  orsf=ORSF(data=pbc, verbose=FALSE, alpha=0.1,
-            ntree=ntree,minsplit=nsize),
-  rsf =rfsrc(Surv(time,status)~.,data=pbc,
+  orsf=ORSF(data=pbc_cmp, ntree=ntree, use.cv = FALSE, 
+            min_obs_to_split_node = nsize, verbose=FALSE),
+  rsf =rfsrc(Surv(time,status)~.,data=pbc_cmp,
              ntree=ntree,nodesize=nsize),
-  cif =pec::pecCforest(Surv(time,status)~.,data=pbc, controls=cif_cntrl),
+  bws = pec::selectCox(Surv(time,status)~., data=pbc_cmp),
   cboost = pec::coxboost(Hist(time,status)~.,
-                       data=pbc,penalty=1000)
+                       data=pbc_cmp,penalty=1000)
 )
 
 # for reproducibility
-set.seed(329) 
+set.seed(32989) 
 
-bri_score = pec::pec(mdls, data=pbc, cens.model = 'cox',
+bri_score = pec::pec(mdls, data=pbc_cmp, cens.model = 'cox',
                      formula = Surv(time,status)~age, 
                      splitMethod = 'BootCv', B=nboots)
-#> Split sample loop (B=10)
+#> Split sample loop (B=25)
 #> Warning: executing %dopar% sequentially: no parallel backend registered
-#> 1
-#> 2
-#> 3
-#> 4
-#> 5
-#> 6
-#> 7
-#> 8
-#> 9
+#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
+#> weights, : Ran out of iterations and did not converge
 #> 10
+#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
+#> weights, : Ran out of iterations and did not converge
+#> 20
 
 print(bri_score)
 #> 
@@ -131,8 +110,8 @@ print(bri_score)
 #> 
 #> Prediction models:
 #> 
-#> Reference      orsf       rsf       cif    cboost 
-#> Reference      orsf       rsf       cif    cboost 
+#> Reference      orsf       rsf       bws    cboost 
+#> Reference      orsf       rsf       bws    cboost 
 #> 
 #> Right-censored response of a survival model
 #> 
@@ -151,38 +130,34 @@ print(bri_score)
 #> 
 #> Type: resampling
 #> Bootstrap sample size:  276 
-#> No. bootstrap samples:  10 
+#> No. bootstrap samples:  25 
 #> Sample size:  276 
 #> 
 #> Cumulative prediction error, aka Integrated Brier score  (IBS)
 #>  aka Cumulative rank probability score
 #> 
-#> Range of integration: 0 and time=4500 :
+#> Range of integration: 0 and time=4509 :
 #> 
 #> 
 #> Integrated Brier score (crps):
 #> 
-#>           IBS[0;time=4500)
-#> Reference            0.183
-#> orsf                 0.113
-#> rsf                  0.120
-#> cif                  0.119
-#> cboost               0.121
+#>           IBS[0;time=4509)
+#> Reference            0.189
+#> orsf                 0.125
+#> rsf                  0.134
+#> bws                  0.147
+#> cboost               0.134
 
 
-cnc_index = pec::cindex(mdls, data=pbc, cens.model = 'cox',
+cnc_index = pec::cindex(mdls, data=pbc_cmp, cens.model = 'cox',
                         formula = Surv(time,status)~age, 
                         splitMethod = 'BootCv', B=nboots)
-#> 1
-#> 2
-#> 3
-#> 4
-#> 5
-#> 6
-#> 7
-#> 8
-#> 9
 #> 10
+#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
+#> weights, : Ran out of iterations and did not converge
+#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
+#> weights, : Loglik converged before variable 3 ; beta may be infinite.
+#> 20
 
 print(cnc_index)
 #> 
@@ -190,8 +165,8 @@ print(cnc_index)
 #> 
 #> Prediction models:
 #> 
-#>   orsf    rsf    cif cboost 
-#>   orsf    rsf    cif cboost 
+#>   orsf    rsf    bws cboost 
+#>   orsf    rsf    bws cboost 
 #> 
 #> Right-censored response of a survival model
 #> 
@@ -210,16 +185,16 @@ print(cnc_index)
 #> 
 #> Type: resampling
 #> Bootstrap sample size:  276 
-#> No. bootstrap samples:  10 
+#> No. bootstrap samples:  25 
 #> Sample size:  276 
 #> 
 #> Estimated C-index in % at time=4191 
 #> 
 #>        AppCindex BootCvCindex
-#> orsf        85.4         81.7
-#> rsf         87.4         80.8
-#> cif         84.4         80.2
-#> cboost      79.5         80.1
+#> orsf        84.2         82.0
+#> rsf         87.8         80.9
+#> bws         75.5         76.8
+#> cboost      79.3         79.9
 #> 
 #> AppCindex    : Apparent (training data) performance
 #> BootCvCindex : Bootstrap crossvalidated performance

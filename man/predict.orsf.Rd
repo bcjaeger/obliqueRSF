@@ -30,8 +30,8 @@ fctrs<-c('trt','ascites','spiders','edema','hepato','stage')
 for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 pbc=na.omit(pbc)
 
-orsf=ORSF(data=pbc,ntree=20,minsplit=75)
-times=seq(365, 365*2,length.out = 250)
+orsf=ORSF(data=pbc)
+times=seq(365, 365*4,length.out = 10)
 
-prds=predict(orsf,newdata=pbc,times=times)
+predict(orsf,newdata=pbc[c(1:5),],times=times)
 }

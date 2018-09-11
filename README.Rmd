@@ -66,21 +66,6 @@ orsf=ORSF(data=pbc, ntree=1000, use.cv = FALSE)
 
 print(orsf)
 
-labs=c("Concordance Index","Brier Score")
-
-orsf$tree_err%>%
-  tidyr::gather(variable,value,-trees)%>%
-  mutate(variable=factor(variable,labels=labs))%>%
-  ggplot(aes(x=trees,y=value))+
-  geom_line(size=1)+
-  facet_wrap(~variable,scales='free')+
-  theme_bw()+theme(
-    panel.grid = element_blank(),
-    axis.text = element_text(face='bold',size=12, color='black'),
-    axis.title = element_text(face='bold',size=12, color='black'),
-    strip.text = element_text(face='bold',size=12,color='black'))+
-    labs(x='Number of trees', y='Error')
-
 nboots=10
 
 ```
@@ -99,8 +84,8 @@ nsize=30
 cif_cntrl=cforest_unbiased(ntree=ntree,minsplit=nsize)
 
 mdls=list(
-  orsf=ORSF(data=pbc, verbose=FALSE, alpha=0.1,
-            ntree=ntree,minsplit=nsize),
+  orsf=ORSF(data=pbc, ntree=ntree, use.cv = FALSE, 
+            min_obs_to_split_node = nsize, verbose=FALSE),
   rsf =rfsrc(Surv(time,status)~.,data=pbc,
              ntree=ntree,nodesize=nsize),
   cif =pec::pecCforest(Surv(time,status)~.,data=pbc, controls=cif_cntrl),

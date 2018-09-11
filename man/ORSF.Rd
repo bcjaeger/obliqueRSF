@@ -43,8 +43,6 @@ ORSF(data, alpha = 0.01, ntree = 100, time = "time",
 \item{verbose}{If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.}
 
 \item{random_seed}{If a number is given, then that number is used as a random seed prior to growing the forest. Use this seed to replicate a forest if needed.}
-
-\item{nmin_leaf}{The minimum number of events required for a leaf node.}
 }
 \value{
 An oblique random survival forest.
@@ -61,5 +59,5 @@ fctrs<-c('trt','ascites','spiders','edema','hepato','stage')
 for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 pbc=na.omit(pbc)
 
-orsf=ORSF(data=pbc,ntree=15,minsplit=75)
+orsf=ORSF(data=pbc)
 }
