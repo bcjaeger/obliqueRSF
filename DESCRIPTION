@@ -4,7 +4,7 @@ Version: 0.1.0
 Authors@R: person("Byron", "Jaeger", email = "bcjaeger@uab.edu", role = c("aut", "cre"))
 Description: Oblique random survival forest (ORSFs) are ensembles for right-censured survival data that use linear combinations of input variables to recursively partition a set of training data. Regularized Cox proportional hazard models identify optimal linear combinations of input variables in each recursive partitioning step while building survival trees.
 Depends: R (>= 3.5.0)
-Imports: Rcpp, RcppArmadillo, pec, data.table, stats, missForest, purrr, glmnet, survival, magrittr, prodlim
+Imports: Rcpp, RcppArmadillo, pec, data.table, stats, missForest, purrr, glmnet, survival, dplyr, rlang, prodlim
 License: GPL-3
 LinkingTo: Rcpp, RcppArmadillo
 Encoding: UTF-8

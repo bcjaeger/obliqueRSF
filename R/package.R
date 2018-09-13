@@ -7,6 +7,8 @@
 #' @author Byron C. Jaeger <bcjaeger@uab.edu>
 #' @import Rcpp pec data.table stats missForest glmnet survival prodlim
 #' @importFrom purrr map reduce map_dbl
+#' @importFrom dplyr arrange 
+#' @importFrom rlang sym
 #' @importFrom Rcpp evalCpp
 #' @useDynLib obliqueRSF
 #' @name obliqueRSF

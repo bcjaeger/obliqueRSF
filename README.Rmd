@@ -65,12 +65,7 @@ set.seed(62689)
 orsf=ORSF(data=pbc, ntree=100, alpha=0.01,verbose=FALSE)
 
 print(orsf)
-<<<<<<< HEAD
 nboots=25
-=======
-
-nboots=10
->>>>>>> 7f89e207a3cc99746a0b7310b937e89200b63712
 
 ```
 
@@ -86,15 +81,9 @@ ntree=300
 nsize=20
 
 mdls=list(
-<<<<<<< HEAD
   orsf=ORSF(data=pbc_cmp, ntree=ntree, use.cv = FALSE, 
             min_obs_to_split_node = nsize, verbose=FALSE),
   rsf =rfsrc(Surv(time,status)~.,data=pbc_cmp,
-=======
-  orsf=ORSF(data=pbc, ntree=ntree, use.cv = FALSE, 
-            min_obs_to_split_node = nsize, verbose=FALSE),
-  rsf =rfsrc(Surv(time,status)~.,data=pbc,
->>>>>>> 7f89e207a3cc99746a0b7310b937e89200b63712
              ntree=ntree,nodesize=nsize),
   bws = pec::selectCox(Surv(time,status)~., data=pbc_cmp),
   cboost = pec::coxboost(Hist(time,status)~.,

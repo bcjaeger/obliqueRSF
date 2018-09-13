@@ -11,7 +11,7 @@
 #' @param min_obs_in_leaf_node The minimum number of observations in child nodes.
 #' @param min_events_in_leaf_node The minimum number of events in child nodes.
 #' @param nsplit The number of random cut-points assessed for each variable.
-#' @param min_lrstat_to_split_node The minimum log-rank statistic required to split a node. The default value of 3.84 corresponds to a p-value of roughly 0.05 or lower.
+#' @param max_pval_to_split_node The maximum p-value corresponding to the log-rank test for splitting a node. If the p-value exceeds this cut-point, the node will not be split.
 #' @param mtry Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.
 #' @param use.cv if TRUE, cross-validation is used to identify optimal values of lambda, a hyper-parameter in penalized regression. if FALSE, a set of candidate lambda values are used. The set of candidate lambda values is built by picking the maximum value of lambda such that the penalized regression model has k degrees of freedom, where k is between 1 and mtry. 
 #' @param verbose If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.
@@ -39,21 +39,13 @@ ORSF <- function(data,
                  min_obs_to_split_node=10,
                  min_obs_in_leaf_node=3,
                  min_events_in_leaf_node=10,
-                 nsplit=10,
-                 min_lrstat_to_split_node=3.84,
+                 nsplit=5,
+                 max_pval_to_split_node=0.01,
                  mtry=ceiling(sqrt(ncol(data)-2)),
                  use.cv=FALSE,
                  verbose=TRUE,
                  random_seed=NULL){
-
-  # Hist=function(...){
-  #   prodlim::Hist(...)
-  # }
-  # 
-  # Surv=function(...){
-  #   survival::Surv(...)
-  # }
-  
+ 
   missing_data <- apply(data,2,function(x) any(is.na(x)))
 
   if(any(missing_data)){
@@ -81,24 +73,16 @@ ORSF <- function(data,
   } 
   
   #dmat=data.matrix(data[,features])
+  data=dplyr::arrange(data,!!rlang::sym(time))
   dmat=model.matrix(~.,data=data[,features])[,-1L]
   time=data$time
   status=data$status
   orsf_ids=1:nrow(data)
   
   
-  
-  
-  lrtestR <- function(time,grp,status){
-    
-    fit=survival:::survdiff.fit(y=Surv(time,status),x=grp)
-    if (any(fit$expected==0)){
-      0
-    } else {
-      tmp <- ((fit$observed - fit$expected))[-1]
-      sum(solve((fit$var)[-1, -1, drop = FALSE], tmp) * tmp)
-    }
-  }
+  # lrtestR <- function(time,grp,status){
+  #   survival::survdiff(survival::Surv(time,status)~grp)$chisq
+  # }
   
   srvR <- function(time_indx, status_indx){
     s=survival::survfit(
@@ -158,7 +142,6 @@ ORSF <- function(data,
     purrr::reduce(out, cbind)
   }
   
-  
   fevalR <- function(prd,time,status,eval.times){
     
     ntimes=length(eval.times)
@@ -195,9 +178,8 @@ ORSF <- function(data,
                mtry=mtry,
                nsplit=nsplit,
                ntree=ntree,
-               mincriterion=min_lrstat_to_split_node,
+               mincriterion=qchisq(1-max_pval_to_split_node,df=1),
                verbose=verbose,
-               split_eval_Rfun=lrtestR,
                surv_KM_Rfun=srvR,
                bootstrap_Rfun=bootR,
                glmnet_Rfun=if(use.cv){cv.netR} else {netR},

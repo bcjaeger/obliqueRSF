@@ -32,6 +32,98 @@ double innerprod(NumericVector x,
   return(sum(x*y));
 }
 
+//[[Rcpp::export]]
+double lrtestC(NumericVector time,
+               NumericVector status,
+               NumericVector grp){
+  
+  int n = time.length();
+  double Y=n;
+  double Y1=sum(grp);
+  
+  int lwr=0, upr=0;
+  
+  for(int i=0; i<n; i++){
+    if(status[i]==0){
+      upr++;
+    } else {
+      break;
+    }
+  }
+  
+  IntegerVector indx = seq(lwr,upr);
+  double d = sum(as<NumericVector>(status[indx]));
+  double d1= innerprod(as<NumericVector>(status[indx]),
+                       as<NumericVector>(grp[indx])  );
+  
+  double e1=Y1*d/Y;
+  double e0=(Y-Y1)*d/Y;
+  double o1=d1;
+  double o0=d-d1;
+  
+  double V = (Y-Y1)*Y1*d*(Y-d) / (pow(Y,2)*(Y-1));
+  Y -= indx.length();
+  Y1 -= sum(as<NumericVector>(grp[indx]));
+  
+  lwr=upr+1;
+  int counter=1;
+  
+  for( ; ; ){
+    
+    upr=lwr;
+    while((status[upr]==0) & (upr<n-1)){
+      upr++;
+    }
+    
+    if(upr==n-1){
+      if(status[upr]==0){
+        break;
+      } else {
+        
+        indx=seq(lwr,upr);
+        
+        d=sum(as<NumericVector>(status[indx]));
+        d1=innerprod(as<NumericVector>(status[indx]),
+                     as<NumericVector>(grp[indx])  );
+        
+        e1+=(Y1*d/Y);
+        e0+=((Y-Y1)*d/Y);
+        o1+=d1;
+        o0+=d-d1;
+        
+        V += (Y-Y1)*Y1*d*(Y-d) / (pow(Y,2)*(Y-1));
+        Y -= indx.length();
+        Y1 -= sum(as<NumericVector>(grp[indx]));
+        
+        break;
+      }
+    }
+    
+    indx=seq(lwr,upr);
+    
+    d=sum(as<NumericVector>(status[indx]));
+    d1=innerprod(as<NumericVector>(status[indx]),
+                 as<NumericVector>(grp[indx])  );
+    
+    e1+=(Y1*d/Y);
+    e0+=((Y-Y1)*d/Y);
+    o1+=d1;
+    o0+=d-d1;
+    
+    V += (Y-Y1)*Y1*d*(Y-d) / (pow(Y,2)*(Y-1));
+    Y -= indx.length();
+    Y1 -= sum(as<NumericVector>(grp[indx]));
+    counter++;
+    lwr=upr+1;
+    
+    if(Y==1) break;
+    
+  }
+  
+  return pow(o1-e1,2) / V;
+  
+}
+
 // [[Rcpp::export]]
 NumericVector moving_average(NumericVector a){
   NumericVector result(a.length());
@@ -423,8 +515,7 @@ List tune_node(NumericMatrix& dmat,
                int& min_obs_in_leaf_node,
                int& min_events_in_leaf_node,
                int& nsplit,
-               double mincriterion,
-               Function& split_eval_Rfun){
+               double mincriterion){
   
   double best_lrstat=0;
   
@@ -495,7 +586,7 @@ List tune_node(NumericMatrix& dmat,
              (s1>=min_events_in_leaf_node) & 
              (s0>=min_events_in_leaf_node)){
             
-            lrstat=lrt_R(time_indx, tmp_grp, status_indx, split_eval_Rfun);
+            lrstat=lrtestC(time_indx, status_indx, tmp_grp);
             
             //Rcout<<"LR stat for this cut: "<<lrstat<<std::endl;
             
@@ -538,7 +629,6 @@ List OST(NumericMatrix dmat,
          int mtry,
          int nsplit,
          double mincriterion,
-         Function split_eval_Rfun,
          Function surv_KM_Rfun,
          Function glmnet_Rfun){
   
@@ -573,7 +663,6 @@ List OST(NumericMatrix dmat,
     StringVector::iterator ng;
     
     for(ng=nodes_to_grow.begin(); ng!=nodes_to_grow.end(); ++ng){
-      
       
       String current_node_name = *ng;
       List current_node = nodes[current_node_name];
@@ -611,6 +700,7 @@ List OST(NumericMatrix dmat,
         stop_if_0++;
         
         IntegerVector node_cols = soft_sample(cols, mtry);
+        
         StringVector bvrs = features[node_cols];
         
         // use glmnet here
@@ -623,6 +713,7 @@ List OST(NumericMatrix dmat,
                                      alpha,
                                      glmnet_Rfun);
         
+        
         List split_status = tune_node(dmat, 
                                       bwts_mat,
                                       indx,
@@ -634,8 +725,7 @@ List OST(NumericMatrix dmat,
                                       min_obs_in_leaf_node,
                                       min_events_in_leaf_node,
                                       nsplit,
-                                      mincriterion,
-                                      split_eval_Rfun);
+                                      mincriterion);
         
         if(Rcpp::as<bool>(split_status["not_splittable"])){
           
@@ -770,7 +860,6 @@ List ORSFcpp(NumericMatrix dmat,
              int ntree,
              double mincriterion,
              bool verbose,
-             Function split_eval_Rfun,
              Function surv_KM_Rfun,
              Function bootstrap_Rfun,
              Function glmnet_Rfun,
@@ -807,7 +896,6 @@ List ORSFcpp(NumericMatrix dmat,
                      mtry, 
                      nsplit,
                      mincriterion,
-                     split_eval_Rfun, 
                      surv_KM_Rfun,
                      glmnet_Rfun);
     
@@ -917,4 +1005,3 @@ List ORSFcpp(NumericMatrix dmat,
   
   
 }
-

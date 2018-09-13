@@ -7,9 +7,9 @@
 ORSF(data, alpha = 0.01, ntree = 100, time = "time",
   status = "status", features = NULL, min_events_to_split_node = 10,
   min_obs_to_split_node = 10, min_obs_in_leaf_node = 3,
-  min_events_in_leaf_node = 10, nsplit = 10,
-  min_lrstat_to_split_node = 3.84, mtry = ceiling(sqrt(ncol(data) -
-  2)), use.cv = FALSE, verbose = TRUE, random_seed = NULL)
+  min_events_in_leaf_node = 10, nsplit = 5,
+  max_pval_to_split_node = 0.01, mtry = ceiling(sqrt(ncol(data) - 2)),
+  use.cv = FALSE, verbose = TRUE, random_seed = NULL)
 }
 \arguments{
 \item{data}{The data used to grow the forest.}
@@ -34,7 +34,7 @@ ORSF(data, alpha = 0.01, ntree = 100, time = "time",
 
 \item{nsplit}{The number of random cut-points assessed for each variable.}
 
-\item{min_lrstat_to_split_node}{The minimum log-rank statistic required to split a node. The default value of 3.84 corresponds to a p-value of roughly 0.05 or lower.}
+\item{max_pval_to_split_node}{The maximum p-value corresponding to the log-rank test for splitting a node. If the p-value exceeds this cut-point, the node will not be split.}
 
 \item{mtry}{Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.}
 
