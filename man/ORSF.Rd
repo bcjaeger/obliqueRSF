@@ -9,7 +9,8 @@ ORSF(data, alpha = 0.01, ntree = 100, time = "time",
   min_obs_to_split_node = 10, min_obs_in_leaf_node = 3,
   min_events_in_leaf_node = 10, nsplit = 5,
   max_pval_to_split_node = 0.01, mtry = ceiling(sqrt(ncol(data) - 2)),
-  use.cv = FALSE, verbose = TRUE, random_seed = NULL)
+  dfmax = round(mtry/2), use.cv = FALSE, verbose = TRUE,
+  random_seed = NULL)
 }
 \arguments{
 \item{data}{The data used to grow the forest.}
@@ -36,7 +37,8 @@ ORSF(data, alpha = 0.01, ntree = 100, time = "time",
 
 \item{max_pval_to_split_node}{The maximum p-value corresponding to the log-rank test for splitting a node. If the p-value exceeds this cut-point, the node will not be split.}
 
-\item{mtry}{Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.}
+\item{mtry}{Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.
+param dfmax Maximum number of variables used in a linear combination for node splitting.}
 
 \item{use.cv}{if TRUE, cross-validation is used to identify optimal values of lambda, a hyper-parameter in penalized regression. if FALSE, a set of candidate lambda values are used. The set of candidate lambda values is built by picking the maximum value of lambda such that the penalized regression model has k degrees of freedom, where k is between 1 and mtry.}
 

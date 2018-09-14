@@ -287,8 +287,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // net_R
-NumericMatrix net_R(Rcpp::NumericMatrix dmat, Rcpp::NumericVector time, Rcpp::IntegerVector status, Rcpp::IntegerVector indx, Rcpp::IntegerVector cols, int mtry, NumericVector alpha, Function f);
-RcppExport SEXP _obliqueRSF_net_R(SEXP dmatSEXP, SEXP timeSEXP, SEXP statusSEXP, SEXP indxSEXP, SEXP colsSEXP, SEXP mtrySEXP, SEXP alphaSEXP, SEXP fSEXP) {
+NumericMatrix net_R(Rcpp::NumericMatrix dmat, Rcpp::NumericVector time, Rcpp::IntegerVector status, Rcpp::IntegerVector indx, Rcpp::IntegerVector cols, int dfmax, NumericVector alpha, Function f);
+RcppExport SEXP _obliqueRSF_net_R(SEXP dmatSEXP, SEXP timeSEXP, SEXP statusSEXP, SEXP indxSEXP, SEXP colsSEXP, SEXP dfmaxSEXP, SEXP alphaSEXP, SEXP fSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -297,10 +297,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type status(statusSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type indx(indxSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type cols(colsSEXP);
-    Rcpp::traits::input_parameter< int >::type mtry(mtrySEXP);
+    Rcpp::traits::input_parameter< int >::type dfmax(dfmaxSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< Function >::type f(fSEXP);
-    rcpp_result_gen = Rcpp::wrap(net_R(dmat, time, status, indx, cols, mtry, alpha, f));
+    rcpp_result_gen = Rcpp::wrap(net_R(dmat, time, status, indx, cols, dfmax, alpha, f));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -327,8 +327,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // OST
-List OST(NumericMatrix dmat, StringVector features, NumericVector alpha, NumericVector time, IntegerVector status, IntegerVector inbag_orsf_ids, int min_events_to_split_node, int min_obs_to_split_node, int min_obs_in_leaf_node, int min_events_in_leaf_node, int mtry, int nsplit, double mincriterion, Function surv_KM_Rfun, Function glmnet_Rfun);
-RcppExport SEXP _obliqueRSF_OST(SEXP dmatSEXP, SEXP featuresSEXP, SEXP alphaSEXP, SEXP timeSEXP, SEXP statusSEXP, SEXP inbag_orsf_idsSEXP, SEXP min_events_to_split_nodeSEXP, SEXP min_obs_to_split_nodeSEXP, SEXP min_obs_in_leaf_nodeSEXP, SEXP min_events_in_leaf_nodeSEXP, SEXP mtrySEXP, SEXP nsplitSEXP, SEXP mincriterionSEXP, SEXP surv_KM_RfunSEXP, SEXP glmnet_RfunSEXP) {
+List OST(NumericMatrix dmat, StringVector features, NumericVector alpha, NumericVector time, IntegerVector status, IntegerVector inbag_orsf_ids, int min_events_to_split_node, int min_obs_to_split_node, int min_obs_in_leaf_node, int min_events_in_leaf_node, int mtry, int dfmax, int nsplit, double mincriterion, Function surv_KM_Rfun, Function glmnet_Rfun);
+RcppExport SEXP _obliqueRSF_OST(SEXP dmatSEXP, SEXP featuresSEXP, SEXP alphaSEXP, SEXP timeSEXP, SEXP statusSEXP, SEXP inbag_orsf_idsSEXP, SEXP min_events_to_split_nodeSEXP, SEXP min_obs_to_split_nodeSEXP, SEXP min_obs_in_leaf_nodeSEXP, SEXP min_events_in_leaf_nodeSEXP, SEXP mtrySEXP, SEXP dfmaxSEXP, SEXP nsplitSEXP, SEXP mincriterionSEXP, SEXP surv_KM_RfunSEXP, SEXP glmnet_RfunSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -343,17 +343,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type min_obs_in_leaf_node(min_obs_in_leaf_nodeSEXP);
     Rcpp::traits::input_parameter< int >::type min_events_in_leaf_node(min_events_in_leaf_nodeSEXP);
     Rcpp::traits::input_parameter< int >::type mtry(mtrySEXP);
+    Rcpp::traits::input_parameter< int >::type dfmax(dfmaxSEXP);
     Rcpp::traits::input_parameter< int >::type nsplit(nsplitSEXP);
     Rcpp::traits::input_parameter< double >::type mincriterion(mincriterionSEXP);
     Rcpp::traits::input_parameter< Function >::type surv_KM_Rfun(surv_KM_RfunSEXP);
     Rcpp::traits::input_parameter< Function >::type glmnet_Rfun(glmnet_RfunSEXP);
-    rcpp_result_gen = Rcpp::wrap(OST(dmat, features, alpha, time, status, inbag_orsf_ids, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, nsplit, mincriterion, surv_KM_Rfun, glmnet_Rfun));
+    rcpp_result_gen = Rcpp::wrap(OST(dmat, features, alpha, time, status, inbag_orsf_ids, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, dfmax, nsplit, mincriterion, surv_KM_Rfun, glmnet_Rfun));
     return rcpp_result_gen;
 END_RCPP
 }
 // ORSFcpp
-List ORSFcpp(NumericMatrix dmat, StringVector features, NumericVector alpha, NumericVector time, IntegerVector status, int min_events_to_split_node, int min_obs_to_split_node, int min_obs_in_leaf_node, int min_events_in_leaf_node, int mtry, int nsplit, int ntree, double mincriterion, bool verbose, Function surv_KM_Rfun, Function bootstrap_Rfun, Function glmnet_Rfun, Function forest_eval_Rfun);
-RcppExport SEXP _obliqueRSF_ORSFcpp(SEXP dmatSEXP, SEXP featuresSEXP, SEXP alphaSEXP, SEXP timeSEXP, SEXP statusSEXP, SEXP min_events_to_split_nodeSEXP, SEXP min_obs_to_split_nodeSEXP, SEXP min_obs_in_leaf_nodeSEXP, SEXP min_events_in_leaf_nodeSEXP, SEXP mtrySEXP, SEXP nsplitSEXP, SEXP ntreeSEXP, SEXP mincriterionSEXP, SEXP verboseSEXP, SEXP surv_KM_RfunSEXP, SEXP bootstrap_RfunSEXP, SEXP glmnet_RfunSEXP, SEXP forest_eval_RfunSEXP) {
+List ORSFcpp(NumericMatrix dmat, StringVector features, NumericVector alpha, NumericVector time, IntegerVector status, int min_events_to_split_node, int min_obs_to_split_node, int min_obs_in_leaf_node, int min_events_in_leaf_node, int mtry, int dfmax, int nsplit, int ntree, double mincriterion, bool verbose, Function surv_KM_Rfun, Function bootstrap_Rfun, Function glmnet_Rfun, Function forest_eval_Rfun);
+RcppExport SEXP _obliqueRSF_ORSFcpp(SEXP dmatSEXP, SEXP featuresSEXP, SEXP alphaSEXP, SEXP timeSEXP, SEXP statusSEXP, SEXP min_events_to_split_nodeSEXP, SEXP min_obs_to_split_nodeSEXP, SEXP min_obs_in_leaf_nodeSEXP, SEXP min_events_in_leaf_nodeSEXP, SEXP mtrySEXP, SEXP dfmaxSEXP, SEXP nsplitSEXP, SEXP ntreeSEXP, SEXP mincriterionSEXP, SEXP verboseSEXP, SEXP surv_KM_RfunSEXP, SEXP bootstrap_RfunSEXP, SEXP glmnet_RfunSEXP, SEXP forest_eval_RfunSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -367,6 +368,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type min_obs_in_leaf_node(min_obs_in_leaf_nodeSEXP);
     Rcpp::traits::input_parameter< int >::type min_events_in_leaf_node(min_events_in_leaf_nodeSEXP);
     Rcpp::traits::input_parameter< int >::type mtry(mtrySEXP);
+    Rcpp::traits::input_parameter< int >::type dfmax(dfmaxSEXP);
     Rcpp::traits::input_parameter< int >::type nsplit(nsplitSEXP);
     Rcpp::traits::input_parameter< int >::type ntree(ntreeSEXP);
     Rcpp::traits::input_parameter< double >::type mincriterion(mincriterionSEXP);
@@ -375,7 +377,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Function >::type bootstrap_Rfun(bootstrap_RfunSEXP);
     Rcpp::traits::input_parameter< Function >::type glmnet_Rfun(glmnet_RfunSEXP);
     Rcpp::traits::input_parameter< Function >::type forest_eval_Rfun(forest_eval_RfunSEXP);
-    rcpp_result_gen = Rcpp::wrap(ORSFcpp(dmat, features, alpha, time, status, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, nsplit, ntree, mincriterion, verbose, surv_KM_Rfun, bootstrap_Rfun, glmnet_Rfun, forest_eval_Rfun));
+    rcpp_result_gen = Rcpp::wrap(ORSFcpp(dmat, features, alpha, time, status, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, dfmax, nsplit, ntree, mincriterion, verbose, surv_KM_Rfun, bootstrap_Rfun, glmnet_Rfun, forest_eval_Rfun));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -405,8 +407,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_obliqueRSF_eval_forest_R", (DL_FUNC) &_obliqueRSF_eval_forest_R, 5},
     {"_obliqueRSF_net_R", (DL_FUNC) &_obliqueRSF_net_R, 8},
     {"_obliqueRSF_tune_node", (DL_FUNC) &_obliqueRSF_tune_node, 12},
-    {"_obliqueRSF_OST", (DL_FUNC) &_obliqueRSF_OST, 15},
-    {"_obliqueRSF_ORSFcpp", (DL_FUNC) &_obliqueRSF_ORSFcpp, 18},
+    {"_obliqueRSF_OST", (DL_FUNC) &_obliqueRSF_OST, 16},
+    {"_obliqueRSF_ORSFcpp", (DL_FUNC) &_obliqueRSF_ORSFcpp, 19},
     {NULL, NULL, 0}
 };
 

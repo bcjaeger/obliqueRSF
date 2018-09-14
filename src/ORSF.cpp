@@ -494,11 +494,11 @@ NumericMatrix net_R(Rcpp::NumericMatrix dmat,
                     Rcpp::IntegerVector status,
                     Rcpp::IntegerVector indx,
                     Rcpp::IntegerVector cols,
-                    int mtry,
+                    int dfmax,
                     NumericVector alpha,
                     Function f){
   
-  return Rcpp::as<NumericMatrix>(f(dmat,time,status,indx,cols,mtry,alpha));
+  return Rcpp::as<NumericMatrix>(f(dmat,time,status,indx,cols,dfmax,alpha));
   
 }
 
@@ -627,6 +627,7 @@ List OST(NumericMatrix dmat,
          int min_obs_in_leaf_node,
          int min_events_in_leaf_node,
          int mtry,
+         int dfmax,
          int nsplit,
          double mincriterion,
          Function surv_KM_Rfun,
@@ -709,7 +710,7 @@ List OST(NumericMatrix dmat,
                                      status,
                                      indx,
                                      node_cols,
-                                     mtry,
+                                     dfmax,
                                      alpha,
                                      glmnet_Rfun);
         
@@ -856,6 +857,7 @@ List ORSFcpp(NumericMatrix dmat,
              int min_obs_in_leaf_node,
              int min_events_in_leaf_node,
              int mtry,
+             int dfmax,
              int nsplit,
              int ntree,
              double mincriterion,
@@ -894,6 +896,7 @@ List ORSFcpp(NumericMatrix dmat,
                      min_obs_in_leaf_node,
                      min_events_in_leaf_node,
                      mtry, 
+                     dfmax,
                      nsplit,
                      mincriterion,
                      surv_KM_Rfun,

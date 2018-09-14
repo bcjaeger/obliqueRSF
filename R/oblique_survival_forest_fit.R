@@ -13,6 +13,7 @@
 #' @param nsplit The number of random cut-points assessed for each variable.
 #' @param max_pval_to_split_node The maximum p-value corresponding to the log-rank test for splitting a node. If the p-value exceeds this cut-point, the node will not be split.
 #' @param mtry Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.
+#' @param dfmax Maximum number of variables used in a linear combination for node splitting.
 #' @param use.cv if TRUE, cross-validation is used to identify optimal values of lambda, a hyper-parameter in penalized regression. if FALSE, a set of candidate lambda values are used. The set of candidate lambda values is built by picking the maximum value of lambda such that the penalized regression model has k degrees of freedom, where k is between 1 and mtry. 
 #' @param verbose If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.
 #' @param random_seed If a number is given, then that number is used as a random seed prior to growing the forest. Use this seed to replicate a forest if needed.  
@@ -42,6 +43,7 @@ ORSF <- function(data,
                  nsplit=5,
                  max_pval_to_split_node=0.01,
                  mtry=ceiling(sqrt(ncol(data)-2)),
+                 dfmax=round(mtry/2),
                  use.cv=FALSE,
                  verbose=TRUE,
                  random_seed=NULL){
@@ -99,7 +101,7 @@ ORSF <- function(data,
          status=status[inb])
   }
   
-  netR <- function(dmat,time,status,indx,cols,mtry,alpha){
+  netR <- function(dmat,time,status,indx,cols,dfmax,alpha){
     
     indx=indx+1
     cols=cols+1
@@ -110,14 +112,14 @@ ORSF <- function(data,
         survival::Surv(time[indx],status[indx]),
         family="cox",
         alpha=a,
-        dfmax=mtry))
+        dfmax=dfmax))
       dfs=unique(fit$df)
       dfs=dfs[dfs>=1]
       if(length(dfs)>=1){
         out_indx=sapply(dfs, function(s) min(which(fit$df==s)))
         as.matrix(fit$beta[,out_indx])
       } else {
-        matrix(rep(0,mtry),ncol=1)
+        matrix(rep(0,dfmax),ncol=1)
       }
     }) 
     
@@ -125,7 +127,7 @@ ORSF <- function(data,
     
   }
   
-  cv.netR <- function(dmat,time,status,indx,cols,mtry,alpha){
+  cv.netR <- function(dmat,time,status,indx,cols,dfmax,alpha){
     indx=indx+1
     cols=cols+1
     out = purrr::map(alpha, .f=function(a){
@@ -133,7 +135,7 @@ ORSF <- function(data,
         dmat[indx,cols],
         survival::Surv(time[indx],status[indx]),
         family="cox", keep = FALSE, grouped = TRUE,
-        alpha=a, nfolds=min(10,length(indx)), dfmax=mtry))
+        alpha=a, nfolds=min(10,length(indx)), dfmax=dfmax))
       as.matrix(cbind(
         coef(cv.fit,'lambda.1se'),
         coef(cv.fit,'lambda.min')
@@ -176,6 +178,7 @@ ORSF <- function(data,
                min_obs_in_leaf_node=min_obs_in_leaf_node,
                min_events_in_leaf_node=min_events_in_leaf_node,
                mtry=mtry,
+               dfmax=dfmax,
                nsplit=nsplit,
                ntree=ntree,
                mincriterion=qchisq(1-max_pval_to_split_node,df=1),
