@@ -25,8 +25,9 @@ predict.orsf <- function(object, newdata, times, ...){
 
   
   missing_data <- apply(newdata,2,function(x) any(is.na(x)))
+  use_imputation=any(missing_data)
   
-  if(any(missing_data)){
+  if(use_imputation){
     cat("performing imputation with missForest:")
     imp_data=suppressWarnings(missForest::missForest(xmis=newdata))
     newdata=imp_data$ximp

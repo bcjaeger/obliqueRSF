@@ -185,54 +185,44 @@ NumericMatrix predict_orsf(List forest,
     // create a vector of inputs for observation with given indx
     NumericVector vec = newx(indx,_); vec.names() = ftrs;
     NumericMatrix mat(ntree, times.length());
+    int mat_row_counter=0;
+    List::iterator tree;
     
-    for(int i = 0; i < ntree; i++) {
-      
-      List ostree = forest[i];
+    for(tree=forest.begin(); tree!= forest.end(); ++tree){
       
       // New observations start at the root of the tree
-      List nodes = ostree["nodes"];
+      List nodes = as<List>(*tree)["nodes"];
       List current_node = nodes["R"];
-      bool is_leaf = current_node["leaf"];
       
-      while(!is_leaf){
+      while(!as<bool>(current_node["leaf"])){
         
-        // Identify the children of the current node
-        CharacterVector children = current_node["children"];
-        
-        // Identify variables & coefficients for linear combos.
-        CharacterVector bvrs = current_node["bvrs"];
-        NumericVector vec_bvrs = vec[bvrs];
-        NumericVector nod_bwts = current_node["bwts"];
-        
-        // compute the current observation's linear combination of inputs
-        
-        double wt = innerprod(vec_bvrs, nod_bwts);
-        double ct_pnt = current_node["cut_pnt"];
+        // compute linear combination of inputs
+        double wt = innerprod(
+          as<NumericVector>(vec[as<CharacterVector>(current_node["bvrs"])]), 
+          as<NumericVector>(current_node["bwts"]));
         
         // Determine the next node for the current observation
-        String new_node = pick_node(wt,ct_pnt,children);
+        String new_node = pick_node(
+          wt,
+          as<double>(current_node["cut_pnt"]),
+          as<CharacterVector>(current_node["children"]));
         
         // Identify this node in the list of nodes
         current_node = nodes[new_node];
         
-        // Assess whether this node is a leaf
-        is_leaf = current_node["leaf"];
-        
       }
       
-      NumericVector node_times=current_node["times"];
-      NumericVector node_probs=current_node["probs"];
+      //NumericVector node_times=current_node["times"];
+      //NumericVector node_probs=current_node["probs"];
       
-      NumericVector preds = surv_est(node_times,
-                                     node_probs,
-                                     times);
+      NumericVector preds=surv_est(as<NumericVector>(current_node["times"]),
+                                   as<NumericVector>(current_node["probs"]),
+                                   times);
       
       //Rcpp::Rcout << preds << std::endl;
       
-      
-      mat(i,_) = preds;
-      
+      mat(mat_row_counter,_) = preds;
+      mat_row_counter++;
     }
     
     output(indx,_) = colmeans(mat);
@@ -242,6 +232,7 @@ NumericMatrix predict_orsf(List forest,
   return(output);
   
 }
+
 
 
 // [[Rcpp::export]]
@@ -836,13 +827,9 @@ List OST(NumericMatrix dmat,
     
   }
   
-  
-  List output = List::create(
-    Named("nodes")=nodes,
-    _["bootstrap_ids"]=bootstrap_ids
-  );
-  
-  return(output);
+  return(List::create(
+      Named("nodes")=nodes,
+      _["bootstrap_ids"]=bootstrap_ids));
   
 }
 

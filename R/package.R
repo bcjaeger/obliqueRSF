@@ -5,10 +5,12 @@
 #' 
 #' @docType package
 #' @author Byron C. Jaeger <bcjaeger@uab.edu>
-#' @import Rcpp pec data.table stats missForest glmnet survival prodlim
+#' @import Rcpp pec data.table stats missForest glmnet survival prodlim tidyr ggplot2
 #' @importFrom purrr map reduce map_dbl
-#' @importFrom dplyr arrange 
+#' @importFrom dplyr arrange mutate
 #' @importFrom rlang sym
+#' @importFrom scales rescale
+#' @importFrom ggthemes theme_foundation
 #' @importFrom Rcpp evalCpp
 #' @useDynLib obliqueRSF
 #' @name obliqueRSF

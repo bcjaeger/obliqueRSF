@@ -31,7 +31,7 @@
 #' orsf=ORSF(data=pbc)
 
 ORSF <- function(data,
-                 alpha=0.01,
+                 alpha=0.50,
                  ntree=100,
                  time='time',
                  status='status',
@@ -40,17 +40,18 @@ ORSF <- function(data,
                  min_obs_to_split_node=10,
                  min_obs_in_leaf_node=3,
                  min_events_in_leaf_node=10,
-                 nsplit=5,
+                 nsplit=15,
                  max_pval_to_split_node=0.01,
                  mtry=ceiling(sqrt(ncol(data)-2)),
-                 dfmax=round(mtry/2),
+                 dfmax=mtry,
                  use.cv=FALSE,
                  verbose=TRUE,
                  random_seed=NULL){
  
   missing_data <- apply(data,2,function(x) any(is.na(x)))
+  use_imputation=any(missing_data)
 
-  if(any(missing_data)){
+  if(use_imputation){
     cat("\nperforming imputation with missForest:\n")
     imp_data=suppressWarnings(missForest::missForest(xmis=data))
     data=imp_data$ximp
@@ -188,11 +189,15 @@ ORSF <- function(data,
                glmnet_Rfun=if(use.cv){cv.netR} else {netR},
                forest_eval_Rfun=fevalR)
   
-  structure(
+  output=structure(
     list(forest = orsf$forest,
          oob_error = orsf$oob_error,
          call = match.call()),
     class = "orsf")
+  
+  if(use_imputation) output$imputed_data=data
+  
+  return(output)
   
 }
 

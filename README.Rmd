@@ -59,12 +59,28 @@ pbc = pbc %>%
          hepato=factor(hepato),
          spiders=factor(spiders),
          edema=factor(edema),
-         stage=factor(stage,ordered=TRUE))
+         stage=factor(stage,ordered=TRUE),
+         time=time/365.25)
 
 set.seed(62689)
-orsf=ORSF(data=pbc, ntree=100, alpha=0.01,verbose=FALSE)
 
-print(orsf)
+orsf=ORSF(data=pbc, ntree=100, alpha=0.50,verbose=FALSE)
+vdat=orsf$imputed_data
+prds=predict(orsf,newdata=orsf$imputed_data,times=3)
+
+vdplot(object=prds,
+       xvar='copper',
+       times=3,
+       data=vdat,
+       fvar = 'ascites',
+       flab = c('No','Yes'),
+       time_units='years',
+       xlab='serum bilirubin',
+       xvar_units = '(mg/dl)',
+       nonevent_lab="survival",
+       include.hist=TRUE)
+
+
 nboots=25
 
 ```

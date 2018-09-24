@@ -40,7 +40,7 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE))
 
 set.seed(62689)
-orsf=ORSF(data=pbc, ntree=100, alpha=0.01,verbose=FALSE)
+orsf=ORSF(data=pbc, ntree=100, alpha=0.50,verbose=FALSE)
 #> 
 #> performing imputation with missForest:
 #>   missForest iteration 1 in progress...done!
@@ -53,9 +53,9 @@ orsf=ORSF(data=pbc, ntree=100, alpha=0.01,verbose=FALSE)
 
 print(orsf)
 #> 
-#> Oblique Random Survival Forest: ORSF(data = pbc, alpha = 0.01, ntree = 100, verbose = FALSE)
+#> Oblique Random Survival Forest: ORSF(data = pbc, alpha = 0.5, ntree = 100, verbose = FALSE)
 #> $concordance
-#> [1] 0.7979088
+#> [1] 0.7948444
 #> 
 #> $integrated_briscr
 #> 
@@ -63,7 +63,7 @@ print(orsf)
 #> 
 #>           IBS[0;time=4795)
 #> Reference            0.174
-#> ORSF                 0.104
+#> ORSF                 0.116
 nboots=25
 ```
 
@@ -143,7 +143,7 @@ print(bri_score)
 #> 
 #>           IBS[0;time=4509)
 #> Reference            0.189
-#> orsf                 0.125
+#> orsf                 0.133
 #> rsf                  0.134
 #> bws                  0.147
 #> cboost               0.134
@@ -155,8 +155,6 @@ cnc_index = pec::cindex(mdls, data=pbc_cmp, cens.model = 'cox',
 #> 10
 #> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
 #> weights, : Ran out of iterations and did not converge
-#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
-#> weights, : Loglik converged before variable 3 ; beta may be infinite.
 #> 20
 
 print(cnc_index)
@@ -191,10 +189,10 @@ print(cnc_index)
 #> Estimated C-index in % at time=4191 
 #> 
 #>        AppCindex BootCvCindex
-#> orsf        84.2         82.0
-#> rsf         87.8         80.9
-#> bws         75.5         76.8
-#> cboost      79.3         79.9
+#> orsf        82.5         81.4
+#> rsf         88.1         80.0
+#> bws         75.5         76.2
+#> cboost      79.3         79.7
 #> 
 #> AppCindex    : Apparent (training data) performance
 #> BootCvCindex : Bootstrap crossvalidated performance
