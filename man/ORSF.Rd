@@ -5,11 +5,12 @@
 \title{Grow an oblique random survival forest (ORSF)}
 \usage{
 ORSF(data, alpha = 0.5, ntree = 100, time = "time",
-  status = "status", features = NULL, min_events_to_split_node = 10,
-  min_obs_to_split_node = 10, min_obs_in_leaf_node = 3,
-  min_events_in_leaf_node = 10, nsplit = 15,
-  max_pval_to_split_node = 0.01, mtry = ceiling(sqrt(ncol(data) - 2)),
-  dfmax = mtry, use.cv = FALSE, verbose = TRUE, random_seed = NULL)
+  status = "status", eval_times = NULL, features = NULL,
+  min_events_to_split_node = 10, min_obs_to_split_node = 10,
+  min_obs_in_leaf_node = 3, min_events_in_leaf_node = 10,
+  nsplit = 15, max_pval_to_split_node = 0.01,
+  mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = FALSE,
+  verbose = TRUE, random_seed = NULL)
 }
 \arguments{
 \item{data}{The data used to grow the forest.}
@@ -21,6 +22,8 @@ ORSF(data, alpha = 0.5, ntree = 100, time = "time",
 \item{time}{A character value indicating the name of the column in the data that measures time.}
 
 \item{status}{A character value indicating the name of the column in the data that measures participant status. A value of zero indicates censoring and a value of 1 indicates that the event occurred.}
+
+\item{eval_times}{A numeric vector holding the time values where ORSF out-of-bag predictions should be computed and evaluated.}
 
 \item{features}{A character vector giving the names of columns in the data set that will be used as features. If NULL, then all of the variables in the data apart from the time and status variable are treated as features. None of these names should contain special characters or spaces.}
 

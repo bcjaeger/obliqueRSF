@@ -179,13 +179,14 @@ NumericMatrix predict_orsf(List forest,
   int ntree = forest.length();
   
   NumericMatrix output(newx.nrow(), times.length());
+  //NumericMatrix mat(ntree, times.length());
   
   for(int indx=0; indx < newx.nrow(); indx++){
     
     // create a vector of inputs for observation with given indx
     NumericVector vec = newx(indx,_); vec.names() = ftrs;
-    NumericMatrix mat(ntree, times.length());
-    int mat_row_counter=0;
+    NumericVector predvec(times.length());
+    //int mat_row_counter=0;
     List::iterator tree;
     
     for(tree=forest.begin(); tree!= forest.end(); ++tree){
@@ -220,12 +221,13 @@ NumericMatrix predict_orsf(List forest,
                                    times);
       
       //Rcpp::Rcout << preds << std::endl;
-      
-      mat(mat_row_counter,_) = preds;
-      mat_row_counter++;
+      predvec+=preds;
+      //mat(mat_row_counter,_) = preds;
+      //mat_row_counter++;
     }
     
-    output(indx,_) = colmeans(mat);
+    output(indx,_) = predvec/ntree;
+    //output(indx,_) = colmeans(mat);
     
   }
   
@@ -705,7 +707,6 @@ List OST(NumericMatrix dmat,
                                      alpha,
                                      glmnet_Rfun);
         
-        
         List split_status = tune_node(dmat, 
                                       bwts_mat,
                                       indx,
@@ -731,7 +732,6 @@ List OST(NumericMatrix dmat,
           nodes_in_queu = leaf_nodes(nodes);
           
         } else {
-          
           
           current_node["bvrs"] = bvrs;
           current_node["bwts"] = split_status["bwts"];
@@ -839,6 +839,7 @@ List ORSFcpp(NumericMatrix dmat,
              NumericVector alpha,
              NumericVector time,
              IntegerVector status,
+             NumericVector eval_times,
              int min_events_to_split_node,
              int min_obs_to_split_node,
              int min_obs_in_leaf_node,
@@ -891,10 +892,11 @@ List ORSFcpp(NumericMatrix dmat,
     
   }
   
-  LogicalVector event_occurred = status==1;
-  NumericVector event_times = time[event_occurred]; 
-  long double   event_maxtime = max(event_times);
-  NumericVector eval_times = seql(0,event_maxtime,10);
+  //LogicalVector event_occurred = status==1;
+  //NumericVector event_times = time[event_occurred]; 
+  //long double   event_maxtime = max(event_times);
+  //long double   event_mintime = min(event_times);
+  //NumericVector eval_times = seql(event_mintime,event_maxtime,10);
   NumericMatrix oob_pred(n, eval_times.length());
   
   // Compute out-of-bag predictions
@@ -989,7 +991,8 @@ List ORSFcpp(NumericMatrix dmat,
   
   List output = List::create(
     Named("forest")=forest,
-    _["oob_error"]=oob_eval);
+    _["oob_error"]=oob_eval,
+    _["oob_preds"]=oob_pred);
   
   return output;
   

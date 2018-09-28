@@ -20,6 +20,5 @@
 print.orsf <- function(x,...){
   cat('\nOblique Random Survival Forest: ')
   print(x$call)
-  print(x$oob_error)
   
 }

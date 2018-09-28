@@ -17,7 +17,8 @@ require(randomForestSRC,quietly=TRUE)
 require(pec,quietly=TRUE)
 require(survival,quietly=TRUE)
 require(CoxBoost,quietly=TRUE)
-require(obliqueRSF,quietly = TRUE)
+require(obliqueRSF,quietly=TRUE)
+require(ggthemes, quietly=TRUE)
 
 ```
 
@@ -42,7 +43,7 @@ devtools::install_github("bcjaeger/obliqueRSF")
 The `ORSF` function is the center piece of the `obliqueRSF` package 
 
 
-```{r usage, echo=TRUE}
+```{r usage, echo=TRUE,fig.width=10,fig.height=6}
 
 
 data("pbc",package='survival')
@@ -64,24 +65,36 @@ pbc = pbc %>%
 
 set.seed(62689)
 
-orsf=ORSF(data=pbc, ntree=100, alpha=0.50,verbose=FALSE)
+orsf=ORSF(data=na.omit(pbc), ntree=100,eval_times = 1:5)
+
+prds=orsf$oob_preds
 vdat=orsf$imputed_data
-prds=predict(orsf,newdata=orsf$imputed_data,times=3)
 
-vdplot(object=prds,
-       xvar='copper',
-       times=3,
+
+# Create a categorical variable indicating stage 4
+vdat$stg4=factor(ifelse(vdat$stage==4,"Stage 4", "Stage 3 or less"))
+
+# there are very few values of ast above 300,
+# but cutting at 300 makes the figure more interpretable
+vdat$ast=pmin(vdat$ast,250)
+
+# Variable dependence plot
+vdplot(object=prds[,5],
+       xvar='ast',
+       times=5,
        data=vdat,
-       fvar = 'ascites',
-       flab = c('No','Yes'),
+       fvar = 'stg4',
+       flab = levels(vdat$stg4),
        time_units='years',
-       xlab='serum bilirubin',
-       xvar_units = '(mg/dl)',
+       xlab='Aspartate aminotransferase',
+       xvar_units = '(U/ml)',
        nonevent_lab="survival",
-       include.hist=TRUE)
+       include.hist=TRUE)+
+  theme(legend.position = 'bottom',
+        legend.direction= 'horizontal')
 
 
-nboots=25
+nboots=50
 
 ```
 
@@ -90,6 +103,11 @@ nboots=25
 `orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over `r nboots` replications of bootstrap cross validation using the complete cases in the `pbc` data set.
 
 ```{r performance}
+
+# it takes a bit more code to incorporate imputation 
+# into bootstrap cross-validation. However, results
+# are similar using only the complete observations,
+# so that's what we will use here
 
 pbc_cmp=na.omit(pbc)
 
@@ -102,22 +120,21 @@ mdls=list(
   rsf =rfsrc(Surv(time,status)~.,data=pbc_cmp,
              ntree=ntree,nodesize=nsize),
   bws = pec::selectCox(Surv(time,status)~., data=pbc_cmp),
-  cboost = pec::coxboost(Hist(time,status)~.,
-                       data=pbc_cmp,penalty=1000)
+  cboost = pec::coxboost(Hist(time,status)~.,data=pbc_cmp)
 )
 
 # for reproducibility
 set.seed(32989) 
 
 bri_score = pec::pec(mdls, data=pbc_cmp, cens.model = 'cox',
-                     formula = Surv(time,status)~age, 
+                     formula = Surv(time,status)~1, 
                      splitMethod = 'BootCv', B=nboots)
 
 print(bri_score)
 
 
 cnc_index = pec::cindex(mdls, data=pbc_cmp, cens.model = 'cox',
-                        formula = Surv(time,status)~age, 
+                        formula = Surv(time,status)~1, 
                         splitMethod = 'BootCv', B=nboots)
 
 print(cnc_index)

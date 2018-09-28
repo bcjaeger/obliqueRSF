@@ -5,6 +5,7 @@
 #' @param ntree The number of trees to grow.
 #' @param time A character value indicating the name of the column in the data that measures time.
 #' @param status A character value indicating the name of the column in the data that measures participant status. A value of zero indicates censoring and a value of 1 indicates that the event occurred.
+#' @param eval_times A numeric vector holding the time values where ORSF out-of-bag predictions should be computed and evaluated.
 #' @param features A character vector giving the names of columns in the data set that will be used as features. If NULL, then all of the variables in the data apart from the time and status variable are treated as features. None of these names should contain special characters or spaces.
 #' @param min_events_to_split_node The minimum number of events required to split a node.
 #' @param min_obs_to_split_node The minimum number of observations required to split a node.
@@ -35,6 +36,7 @@ ORSF <- function(data,
                  ntree=100,
                  time='time',
                  status='status',
+                 eval_times=NULL,
                  features=NULL,
                  min_events_to_split_node=10,
                  min_obs_to_split_node=10,
@@ -78,14 +80,9 @@ ORSF <- function(data,
   #dmat=data.matrix(data[,features])
   data=dplyr::arrange(data,!!rlang::sym(time))
   dmat=model.matrix(~.,data=data[,features])[,-1L]
-  time=data$time
-  status=data$status
+  time=data[[time]]
+  status=data[[status]]
   orsf_ids=1:nrow(data)
-  
-  
-  # lrtestR <- function(time,grp,status){
-  #   survival::survdiff(survival::Surv(time,status)~grp)$chisq
-  # }
   
   srvR <- function(time_indx, status_indx){
     s=survival::survfit(
@@ -136,8 +133,9 @@ ORSF <- function(data,
         dmat[indx,cols],
         survival::Surv(time[indx],status[indx]),
         family="cox", keep = FALSE, grouped = TRUE,
-        alpha=a, nfolds=min(10,length(indx)), dfmax=dfmax))
+        alpha=a, nfolds=min(5,length(indx)), dfmax=dfmax))
       as.matrix(cbind(
+        coef(cv.fit, cv.fit$lambda[min(which(cv.fit$glmnet.fit$df>0))]),
         coef(cv.fit,'lambda.1se'),
         coef(cv.fit,'lambda.min')
       ))
@@ -157,7 +155,7 @@ ORSF <- function(data,
     
     intbs=suppressMessages(pec::crps(pec::pec(
       list(ORSF=prd),times=eval.times,exact=F,
-      start=eval.times[1],
+      start=eval.times[1],maxtime=eval.times[length(eval.times)],
       formula=Surv(time,status)~1,
       data=data.frame(time=time,status=status))))
     
@@ -169,11 +167,16 @@ ORSF <- function(data,
     set.seed(random_seed)
   }
   
+  if(is.null(eval_times)){
+    eval_times=seq(min(time[status==1]),max(time[status==1]),length.out=50)
+  } 
+  
   orsf=ORSFcpp(dmat=dmat,
                features=colnames(dmat),
                alpha=alpha,
                time=time,
                status=status,
+               eval_times=eval_times,
                min_events_to_split_node=min_events_to_split_node,
                min_obs_to_split_node=min_obs_to_split_node,
                min_obs_in_leaf_node=min_obs_in_leaf_node,
@@ -191,6 +194,8 @@ ORSF <- function(data,
   
   output=structure(
     list(forest = orsf$forest,
+         oob_times = orsf$oob_times,
+         oob_preds = orsf$oob_preds,
          oob_error = orsf$oob_error,
          call = match.call()),
     class = "orsf")

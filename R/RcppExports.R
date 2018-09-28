@@ -101,7 +101,7 @@ OST <- function(dmat, features, alpha, time, status, inbag_orsf_ids, min_events_
     .Call('_obliqueRSF_OST', PACKAGE = 'obliqueRSF', dmat, features, alpha, time, status, inbag_orsf_ids, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, dfmax, nsplit, mincriterion, surv_KM_Rfun, glmnet_Rfun)
 }
 
-ORSFcpp <- function(dmat, features, alpha, time, status, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, dfmax, nsplit, ntree, mincriterion, verbose, surv_KM_Rfun, bootstrap_Rfun, glmnet_Rfun, forest_eval_Rfun) {
-    .Call('_obliqueRSF_ORSFcpp', PACKAGE = 'obliqueRSF', dmat, features, alpha, time, status, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, dfmax, nsplit, ntree, mincriterion, verbose, surv_KM_Rfun, bootstrap_Rfun, glmnet_Rfun, forest_eval_Rfun)
+ORSFcpp <- function(dmat, features, alpha, time, status, eval_times, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, dfmax, nsplit, ntree, mincriterion, verbose, surv_KM_Rfun, bootstrap_Rfun, glmnet_Rfun, forest_eval_Rfun) {
+    .Call('_obliqueRSF_ORSFcpp', PACKAGE = 'obliqueRSF', dmat, features, alpha, time, status, eval_times, min_events_to_split_node, min_obs_to_split_node, min_obs_in_leaf_node, min_events_in_leaf_node, mtry, dfmax, nsplit, ntree, mincriterion, verbose, surv_KM_Rfun, bootstrap_Rfun, glmnet_Rfun, forest_eval_Rfun)
 }
 

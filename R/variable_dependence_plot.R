@@ -44,12 +44,11 @@ vdplot <- function(object,xvar,times,include.hist=TRUE,
                    data=NULL,time_units=NULL,
                    xlab=xvar,xvar_units=NULL){
   
+  ntimes=length(times)
   if(class(object)[1]=='orsf'){
-    ntimes=length(times)
     prds=predictSurvProb(object,newdata=data,times=times)
   } else {
     prds=object
-    ntimes=ncol(object)
   }
   
   if(is.null(fvar)){
