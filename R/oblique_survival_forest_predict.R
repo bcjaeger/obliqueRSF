@@ -39,10 +39,12 @@ predict.orsf <- function(object, newdata, times, ...){
     if(ordered_fac) newdata[[i]]=as.numeric(newdata[[i]])
     
   }
-
-  newx = stats::model.matrix(~.,data=newdata)[,-1L]
   
-  predict_orsf(object$forest,newx=newx,times)
+  if(class(newdata)[1]!='matrix'){
+    newdata = stats::model.matrix(~.,data=newdata)[,-1L]
+  }
+
+  predict_orsf(object$forest,newx=newdata,times=times)
 
 }
 

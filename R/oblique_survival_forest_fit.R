@@ -43,7 +43,7 @@ ORSF <- function(data,
                  min_obs_in_leaf_node=3,
                  min_events_in_leaf_node=10,
                  nsplit=15,
-                 max_pval_to_split_node=0.01,
+                 max_pval_to_split_node=0.05,
                  mtry=ceiling(sqrt(ncol(data)-2)),
                  dfmax=mtry,
                  use.cv=FALSE,
@@ -194,13 +194,14 @@ ORSF <- function(data,
   
   output=structure(
     list(forest = orsf$forest,
-         oob_times = orsf$oob_times,
+         oob_times = eval_times,
          oob_preds = orsf$oob_preds,
          oob_error = orsf$oob_error,
+         data=data,
          call = match.call()),
     class = "orsf")
   
-  if(use_imputation) output$imputed_data=data
+  output$imputation_used= if(use_imputation) TRUE else FALSE 
   
   return(output)
   

@@ -4,16 +4,14 @@
 \alias{vdplot}
 \title{Plot variable dependence using an oblique random survival forest}
 \usage{
-vdplot(object, xvar, times, include.hist = TRUE,
-  nonevent_lab = "survival", fvar = NULL, flab = NULL, data = NULL,
-  time_units = NULL, xlab = xvar, xvar_units = NULL)
+vdplot(object, xvar, include.hist = TRUE, nonevent_lab = "survival",
+  fvar = NULL, flab = NULL, time_units = "years", xlab = xvar,
+  xvar_units = NULL, xlvls = NULL, sub_times = NULL)
 }
 \arguments{
 \item{object}{an ORSF object (i.e. object returned from the ORSF function)}
 
 \item{xvar}{a string giving the name of the x-axis variable}
-
-\item{times}{a vector of times to compute predicted survival probabilities}
 
 \item{include.hist}{if true, a histogram showing the distribution of values for the x-axis variable will be included at the bottom of the plot.}
 
@@ -23,16 +21,16 @@ vdplot(object, xvar, times, include.hist = TRUE,
 
 \item{flab}{the labels to be printed describing the facet variable. For a facet variable with k categories, flab should be a vector with k labels, given in the same order as the levels of the facet variable.}
 
-\item{data}{a dataframe to be used for predictions and x-values in the plot}
-
 \item{time_units}{the unit of time, e.g. days, since baseline.}
 
 \item{xlab}{the label to be printed describing the x-axis variable}
 
 \item{xvar_units}{the unit of measurement for the x-axis variable. For example, age is usually measured in years.}
+
+\item{sub_times}{sometimes you just want}
 }
 \value{
-A printed summary of the oblique random survival forest.
+A ggplot2 object
 }
 \description{
 Plot variable dependence using an oblique random survival forest
@@ -47,19 +45,8 @@ fctrs<-c('trt','ascites','spiders','edema','hepato','stage')
 for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 pbc=na.omit(pbc)
 
-orsf=ORSF(data=pbc)
-prds=predict(orsf,newdata=pbc,times=3)
+orsf=ORSF(data=pbc, eval_time=5)
 
-vdplot(object=prds,
-       xvar='copper',
-       times=3,
-       data=pbc,
-       fvar = 'ascites',
-       flab = c('No','Yes'),
-       time_units='years',
-       xlab='serum bilirubin',
-       xvar_units = '(mg/dl)',
-       nonevent_lab="survival",
-       include.hist=TRUE)
+vdplot(object=orsf, xvar='bili', xlab='Bilirubin', xvar_units='mg/dl')
 
 }

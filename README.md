@@ -38,11 +38,9 @@ pbc = pbc %>%
          spiders=factor(spiders),
          edema=factor(edema),
          stage=factor(stage,ordered=TRUE),
-         time=time/365.25)
+         time=time/365.25) 
 
-set.seed(62689)
-
-orsf=ORSF(data=pbc, ntree=500, alpha=0.50,verbose=FALSE)
+orsf=ORSF(data=pbc,ntree=200,eval_times=c(1:10),verbose=F)
 #> 
 #> performing imputation with missForest:
 #>   missForest iteration 1 in progress...done!
@@ -51,51 +49,48 @@ orsf=ORSF(data=pbc, ntree=500, alpha=0.50,verbose=FALSE)
 #>   missForest iteration 4 in progress...done!
 #>   missForest iteration 5 in progress...done!
 #>   missForest iteration 6 in progress...done!
-#>   missForest iteration 7 in progress...done!
-#>   missForest iteration 8 in progress...done!
-#>   missForest iteration 9 in progress...done!
-#>   missForest iteration 10 in progress...done!
-
-prds=orsf$oob_preds
-vdat=orsf$imputed_data
-times=orsf$oob_times
-
-# Create a categorical variable indicating stage 4
-vdat$stg4=factor(ifelse(vdat$stage==4,"Stage 4", "Stage 3 or less"))
-
-# there are very few values of ast above 300,
-# but cutting at 300 makes the figure more interpretable
-vdat$ast=pmin(vdat$ast,300)
-
-# Variable dependence plot
-vdplot(object=prds[,c(1:5)],
-       xvar='ast',
-       times=round(times)[1:5],
-       data=vdat,
-       fvar = 'stg4',
-       flab = levels(vdat$stg4),
-       time_units='years',
-       xlab='Aspartate aminotransferase',
-       xvar_units = '(U/ml)',
-       nonevent_lab="survival",
-       include.hist=TRUE)+
-  theme(legend.position = 'bottom',
-        legend.direction= 'horizontal')
-#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-![](README-usage-1.png)
+The `vdplot` function allows you to quickly look at the patterns in the predictions from an ORSF.
 
 ``` r
 
+# Variable dependence plot (vdplot)
 
-nboots=50
+# Survival probabilities for a continuous variable
+# note the use of sub_times, which allows you to pick
+# one or more times in the evaluation times of an ORSF object
+
+vdplot(object=orsf, xvar='bili', xlab='Bilirubin levels', 
+       xvar_units = 'mg/dl', sub_times = 5)
+#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
+
+![](README-unnamed-chunk-2-1.png)
+
+``` r
+
+# here is another continuous variable, using 3 times.
+vdplot(object=orsf, xvar='albumin', xlab='Serum albumin', 
+       xvar_units = 'g/dl', sub_times = c(1,3,5))
+#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![](README-unnamed-chunk-3-1.png)
+
+``` r
+
+# A categorical variable, sex, which interacts with hepato.
+vdplot(object=orsf, xvar='sex', xlab=c("Sex"), xlvls=c("Male","Female"),
+       fvar='hepato',flab=c("Normal size liver","Enlarged liver"))
+```
+
+![](README-unnamed-chunk-4-1.png)
 
 Performance
 ===========
 
-`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 50 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
+`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over 5 replications of bootstrap cross validation using the complete cases in the `pbc` data set.
 
 ``` r
 
@@ -106,7 +101,7 @@ Performance
 
 pbc_cmp=na.omit(pbc)
 
-ntree=300
+ntree=100
 nsize=20
 
 mdls=list(
@@ -125,17 +120,15 @@ bri_score = pec::pec(mdls, data=pbc_cmp, cens.model = 'cox',
                      formula = Surv(time,status)~1, 
                      splitMethod = 'BootCv', B=nboots)
 #> No covariates  specified: Kaplan-Meier for censoring times used for weighting.
-#> Split sample loop (B=50)
+#> Split sample loop (B=5)
 #> Warning: executing %dopar% sequentially: no parallel backend registered
+#> 1
+#> 2
+#> 3
+#> 4
 #> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
 #> weights, : Ran out of iterations and did not converge
-#> 10
-#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
-#> weights, : Ran out of iterations and did not converge
-#> 20
-#> 30
-#> 40
-#> 50
+#> 5
 
 print(bri_score)
 #> 
@@ -163,38 +156,34 @@ print(bri_score)
 #> 
 #> Type: resampling
 #> Bootstrap sample size:  276 
-#> No. bootstrap samples:  50 
+#> No. bootstrap samples:  5 
 #> Sample size:  276 
 #> 
 #> Cumulative prediction error, aka Integrated Brier score  (IBS)
 #>  aka Cumulative rank probability score
 #> 
-#> Range of integration: 0 and time=11.7 :
+#> Range of integration: 0 and time=12.4 :
 #> 
 #> 
 #> Integrated Brier score (crps):
 #> 
-#>           IBS[0;time=11.7)
-#> Reference            0.187
-#> orsf                 0.129
-#> rsf                  0.134
-#> bws                  0.147
-#> cboost               0.135
+#>           IBS[0;time=12.4)
+#> Reference            0.201
+#> orsf                 0.137
+#> rsf                  0.146
+#> bws                  0.159
+#> cboost               0.143
 
 
 cnc_index = pec::cindex(mdls, data=pbc_cmp, cens.model = 'cox',
                         formula = Surv(time,status)~1, 
                         splitMethod = 'BootCv', B=nboots)
 #> No covariates  specified: cens.model coerced to "marginal".
-#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
-#> weights, : Ran out of iterations and did not converge
-#> 10
-#> Warning in fitter(X, Y, strata = Strata, offset = offset, weights =
-#> weights, : Ran out of iterations and did not converge
-#> 20
-#> 30
-#> 40
-#> 50
+#> 1
+#> 2
+#> 3
+#> 4
+#> 5
 
 print(cnc_index)
 #> 
@@ -222,16 +211,16 @@ print(cnc_index)
 #> 
 #> Type: resampling
 #> Bootstrap sample size:  276 
-#> No. bootstrap samples:  50 
+#> No. bootstrap samples:  5 
 #> Sample size:  276 
 #> 
 #> Estimated C-index in % at time=11.5 
 #> 
 #>        AppCindex BootCvCindex
-#> orsf        82.7         82.3
-#> rsf         87.5         80.4
-#> bws         75.1         78.4
-#> cboost      78.6         81.0
+#> orsf        83.1         80.5
+#> rsf         87.8         78.1
+#> bws         75.1         72.3
+#> cboost      78.8         78.7
 #> 
 #> AppCindex    : Apparent (training data) performance
 #> BootCvCindex : Bootstrap crossvalidated performance
