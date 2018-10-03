@@ -4,9 +4,10 @@
 \alias{vdplot}
 \title{Plot variable dependence using an oblique random survival forest}
 \usage{
-vdplot(object, xvar, times, include.hist = TRUE,
-  nonevent_lab = "survival", fvar = NULL, flab = NULL, data = NULL,
-  time_units = NULL, xlab = xvar, xvar_units = NULL)
+vdplot(object, xvar, times, data, include.hist = TRUE,
+  nonevent_lab = "survival", fvar = NULL, flab = NULL,
+  time_units = "years", xlab = xvar, xvar_units = NULL,
+  xlvls = NULL)
 }
 \arguments{
 \item{object}{an ORSF object (i.e. object returned from the ORSF function)}
@@ -14,6 +15,8 @@ vdplot(object, xvar, times, include.hist = TRUE,
 \item{xvar}{a string giving the name of the x-axis variable}
 
 \item{times}{a vector of times to compute predicted survival probabilities}
+
+\item{data}{a dataframe to be used for predictions and x-values in the plot}
 
 \item{include.hist}{if true, a histogram showing the distribution of values for the x-axis variable will be included at the bottom of the plot.}
 
@@ -23,8 +26,6 @@ vdplot(object, xvar, times, include.hist = TRUE,
 
 \item{flab}{the labels to be printed describing the facet variable. For a facet variable with k categories, flab should be a vector with k labels, given in the same order as the levels of the facet variable.}
 
-\item{data}{a dataframe to be used for predictions and x-values in the plot}
-
 \item{time_units}{the unit of time, e.g. days, since baseline.}
 
 \item{xlab}{the label to be printed describing the x-axis variable}
@@ -32,7 +33,7 @@ vdplot(object, xvar, times, include.hist = TRUE,
 \item{xvar_units}{the unit of measurement for the x-axis variable. For example, age is usually measured in years.}
 }
 \value{
-A printed summary of the oblique random survival forest.
+A ggplot2 object
 }
 \description{
 Plot variable dependence using an oblique random survival forest

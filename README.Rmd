@@ -61,38 +61,23 @@ pbc = pbc %>%
          spiders=factor(spiders),
          edema=factor(edema),
          stage=factor(stage,ordered=TRUE),
-         time=time/365.25)
+         time=time/365.25) 
 
 set.seed(62689)
+eval_times=1:10
 
-orsf=ORSF(data=na.omit(pbc), ntree=100,eval_times = 1:5)
+orsf=ORSF(data=pbc,ntree=300,eval_times=eval_times,verbose=F)
 
-prds=orsf$oob_preds
-vdat=orsf$imputed_data
-
-
-# Create a categorical variable indicating stage 4
-vdat$stg4=factor(ifelse(vdat$stage==4,"Stage 4", "Stage 3 or less"))
-
-# there are very few values of ast above 300,
-# but cutting at 300 makes the figure more interpretable
-vdat$ast=pmin(vdat$ast,250)
 
 # Variable dependence plot
-vdplot(object=prds[,5],
-       xvar='ast',
-       times=5,
-       data=vdat,
-       fvar = 'stg4',
-       flab = levels(vdat$stg4),
-       time_units='years',
-       xlab='Aspartate aminotransferase',
-       xvar_units = '(U/ml)',
-       nonevent_lab="survival",
-       include.hist=TRUE)+
-  theme(legend.position = 'bottom',
-        legend.direction= 'horizontal')
+vdplot(object=orsf$oob_preds[,5], xvar='bili', xlab='Bilirubin levels',
+       times=eval_times[5], data=orsf$imputed_data, xvar_units = 'mg/dl')
 
+vdplot(object=orsf$oob_preds, xvar='sex', xlab=c("male","female"),
+       times=eval_times, data=orsf$imputed_data, fvar='hepato')
+
+vdplot(object=orsf$oob_preds, xvar='trt', xlab=c("placebo","treatment"),
+       times=eval_times, data=orsf$imputed, fvar='edema')
 
 nboots=50
 

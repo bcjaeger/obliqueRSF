@@ -8,8 +8,8 @@ ORSF(data, alpha = 0.5, ntree = 100, time = "time",
   status = "status", eval_times = NULL, features = NULL,
   min_events_to_split_node = 10, min_obs_to_split_node = 10,
   min_obs_in_leaf_node = 3, min_events_in_leaf_node = 10,
-  nsplit = 15, max_pval_to_split_node = 0.01,
-  mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = FALSE,
+  nsplit = 15, max_pval_to_split_node = 0.05,
+  mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = TRUE,
   verbose = TRUE, random_seed = NULL)
 }
 \arguments{

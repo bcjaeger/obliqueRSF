@@ -11,7 +11,7 @@
 #' @param time_units the unit of time, e.g. days, since baseline.
 #' @param xlab the label to be printed describing the x-axis variable
 #' @param xvar_units the unit of measurement for the x-axis variable. For example, age is usually measured in years.
-#' @return A printed summary of the oblique random survival forest.
+#' @return A ggplot2 object
 #' @export
 #' @examples
 #'
@@ -39,12 +39,41 @@
 #'        include.hist=TRUE)
 #'
 
-vdplot <- function(object,xvar,times,include.hist=TRUE,
-                   nonevent_lab="survival",fvar=NULL,flab=NULL,
-                   data=NULL,time_units=NULL,
-                   xlab=xvar,xvar_units=NULL){
+
+# object=orsf
+# xvar='sex'
+# times=1:10
+# data=pbc
+# fvar = 'ascites'
+# flab = NULL
+# time_units='years'
+# xlab=xvar
+# xvar_units = NULL
+# nonevent_lab="survival"
+# include.hist=TRUE
+
+vdplot <- function(object,xvar,times,data,include.hist=TRUE,
+                   nonevent_lab="survival",
+                   fvar=NULL,flab=NULL,time_units="years",
+                   xlab=xvar,xvar_units=NULL,xlvls=NULL){
   
   ntimes=length(times)
+  nxvals=length(unique(data[[xvar]]))
+  
+  if(!is.null(fvar)){
+    if(!is.factor(data[[fvar]])){
+      stop("facet variable must be a factor") 
+    }
+  }
+  
+  if(is.null(flab) & !is.null(fvar)){
+    flab=paste(fvar,'=',levels(data[[fvar]]))
+  }
+  
+  if(nxvals<4 & !is.factor(data[[xvar]])){
+    warning("xvar has < 4 unique values but is not a factor")
+  }
+  
   if(class(object)[1]=='orsf'){
     prds=predictSurvProb(object,newdata=data,times=times)
   } else {
@@ -63,39 +92,85 @@ vdplot <- function(object,xvar,times,include.hist=TRUE,
     ggdat=dplyr::mutate(ggdat,fvar=factor(fvar,labels=flab))
   }
   
+  ggdat=na.omit(ggdat)
+  
+  if(is.factor(data[[xvar]])){
+    if(is.null(xlab)) xlab=levels(data[[xvar]])
+    ggdat$xvar=factor(ggdat$xvar,labels=xlab)
+    if(is.null(xvar_units)) xvar_units=levels(data[[xvar]])
+  } 
+  
   if(ntimes>1){
-    if(!is.null(time_units)) time_units=paste(",",time_units)
-    ggdat=mutate(ggdat,time=factor(time,levels=letters[1:ntimes],
+    
+    ggdat=mutate(ggdat,time=factor(time,
+                                   levels=letters[1:ntimes],
                                    labels=paste(times)))
-    p=ggplot(ggdat,aes_string(x='xvar',y='pred',col='time'))+
-      scale_color_viridis_d()+
-      geom_smooth(se=F,method='gam',formula=y~s(x),size=1.2)+
-      labs(y=paste0("Probability of ",nonevent_lab),
-           x=paste(xlab,xvar_units,collapse=', '),
-           col=paste0("Time since \nbaseline",time_units))+
-      theme_Publication()+
-      theme(legend.position = 'right',
-            legend.direction = 'vertical')
     
+    if(is.factor(data[[xvar]])){
+
+      p=ggplot(ggdat,aes_string(x='time',y='pred',col='xvar'))+
+        geom_point(position=position_jitterdodge(dodge.width = 1/2),
+                   size=3/4, alpha=1/3)+
+        stat_summary(fun.data = mean_cl_boot,size=1, 
+                     position=position_dodge(width=1/2))+
+        scale_color_viridis_d(end=0.75)+
+        labs(y=paste0("Probability of ",nonevent_lab),
+             x=paste0("Time since baseline, ",time_units),
+             col=xvar)+
+        theme_Publication()+
+        scale_x_discrete(labels = 1:ntimes)+
+        theme(legend.position = 'right',
+              legend.direction = 'vertical')
+      
+    } else {
+      
+      time_units=paste(",",time_units)
+      color_label = paste0("Time since \nbaseline",time_units)
+      
+      
+      p=ggplot(ggdat,aes_string(x='xvar',y='pred',col='time'))+
+        scale_color_viridis_d()+
+        geom_smooth(se=F,method='gam',formula=y~s(x),size=1.2)+
+        labs(y=paste0("Probability of ",nonevent_lab),
+             x=paste(xlab,xvar_units,collapse=', '),
+             col=paste0("Time since \nbaseline",time_units))+
+        theme_Publication()+
+        theme(legend.position = 'right',
+              legend.direction = 'vertical')
+  }
     
-  } else {
-    p=ggplot(ggdat,aes_string(x='xvar',y='pred'))+
-      geom_smooth(se=T,method='gam',formula=y~s(x),size=1.2,col='red')+
-      labs(y=paste0("Probability of ",nonevent_lab,
-                    " at ",times," ",time_units),
-           x=paste(xlab,xvar_units,collapse=', '))+
-      theme_Publication()
+  } else if (ntimes==1) {
+    
+    if(is.factor(data[[xvar]])){
+      
+      p=ggplot(ggdat,aes_string(x='xvar',y='pred'))+
+        geom_boxplot()+
+        labs(y=paste0("Probability of ",nonevent_lab,
+                      " at ",times," ",time_units),
+             x=paste(xlab))+
+        scale_x_discrete(labels = xvar_units)+
+        theme_Publication()
+      
+    } else {
+     
+      p=ggplot(ggdat,aes_string(x='xvar',y='pred'))+
+        geom_smooth(se=T,method='gam',formula=y~s(x),size=1.2,col='red')+
+        labs(y=paste0("Probability of ",nonevent_lab,
+                      " at ",times," ",time_units),
+             x=paste0(xlab,', ', xvar_units))+
+        theme_Publication()
+       
+    }
     
   }
   
-  if(include.hist){
+  if(include.hist&!is.factor(data[[xvar]])){
     ..density..=NULL
     p=p+geom_histogram(
-      aes(x=xvar,y=rescale(
+      aes(x=xvar,y=scales::rescale(
         ..density..,to=c(0,max(min(prds),1/3)))),
       inherit.aes=F,fill='grey50',alpha=1/3,col='white')
   }
-
   
   return(if(is.null(fvar)) p else p+facet_wrap(~fvar))
   
