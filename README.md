@@ -26,10 +26,12 @@ The `ORSF` function is the center piece of the `obliqueRSF` package
 data("pbc",package='survival')
 
 # event is death
-# censored at time of last contact or transplant
+# censor study participants at time of last contact or transplant
 pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 
 # format categorical variables as factors
+# if we don't do this, missforest will not impute 0/1 variables 
+# in the way that we would like it to.
 pbc = pbc %>% 
   dplyr::select(-id)%>%
   mutate(trt=factor(trt),
@@ -40,7 +42,11 @@ pbc = pbc %>%
          stage=factor(stage,ordered=TRUE),
          time=time/365.25) 
 
-orsf=ORSF(data=pbc,ntree=200,eval_times=c(1:10),verbose=F)
+orsf=ORSF(data=pbc, # data to fit trees with
+          ntree=200, # number of trees to fit
+          eval_times=c(1:10), # when will predictions be made?
+          # note: eval_times will be used to make figures
+          verbose=F) # suppresses console output
 #> 
 #> performing imputation with missForest:
 #>   missForest iteration 1 in progress...done!
@@ -68,9 +74,10 @@ vdplot(object=orsf, xvar='bili', xlab='Bilirubin levels',
 
 ![](README-unnamed-chunk-2-1.png)
 
+here is another application of `vdplot` with a continuous x-variable, but this time we will show predictions at three times: 1 year, 3 years, and 5 years since baseline.
+
 ``` r
 
-# here is another continuous variable, using 3 times.
 vdplot(object=orsf, xvar='albumin', xlab='Serum albumin', 
        xvar_units = 'g/dl', sub_times = c(1,3,5))
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
@@ -78,14 +85,26 @@ vdplot(object=orsf, xvar='albumin', xlab='Serum albumin',
 
 ![](README-unnamed-chunk-3-1.png)
 
+The `vdplot` function also supports categorical x-variables. Setting the x-variable to `sex`, and the facet variable to `hepato`, we find a clear interaction between sex and the presence of an enlarged liver (i.e., `hepato=1`).
+
 ``` r
 
-# A categorical variable, sex, which interacts with hepato.
+
 vdplot(object=orsf, xvar='sex', xlab=c("Sex"), xlvls=c("Male","Female"),
        fvar='hepato',flab=c("Normal size liver","Enlarged liver"))
 ```
 
 ![](README-unnamed-chunk-4-1.png)
+
+Is this interaction something that is purely explained by sex, or is it a confounding effect from other variables that are not the same between the two sexes? We can address this using the partial dependence plot (`pdplot`) function:
+
+``` r
+
+pdplot(object=orsf, xvar='sex',xlab='Sex', xlvls=c("Male","Female"),
+       fvar='hepato',flvls=c("Normal size liver","Enlarged liver"))
+```
+
+![](README-unnamed-chunk-5-1.png)
 
 Performance
 ===========
@@ -217,10 +236,10 @@ print(cnc_index)
 #> Estimated C-index in % at time=11.5 
 #> 
 #>        AppCindex BootCvCindex
-#> orsf        83.1         80.5
-#> rsf         87.8         78.1
+#> orsf        83.3         80.5
+#> rsf         87.9         78.1
 #> bws         75.1         72.3
-#> cboost      78.8         78.7
+#> cboost      78.7         78.7
 #> 
 #> AppCindex    : Apparent (training data) performance
 #> BootCvCindex : Bootstrap crossvalidated performance

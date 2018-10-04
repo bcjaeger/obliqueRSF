@@ -9,11 +9,8 @@
 #' @param time_units the unit of time, e.g. days, since baseline.
 #' @param xlab the label to be printed describing the x-axis variable
 #' @param xvar_units the unit of measurement for the x-axis variable. For example, age is usually measured in years.
-<<<<<<< HEAD
 #' @param xlvls a character vector giving the labels that correspond to categorical xvar. This does not need to be specified if xvar is continuous. 
 #' @param sub_times sometimes you just want
-=======
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
 #' @return A ggplot2 object
 #' @export
 #' @examples
@@ -32,7 +29,6 @@
 #'
 
 
-<<<<<<< HEAD
 vdplot <- function(object,
                    xvar,
                    include.hist=TRUE,
@@ -59,50 +55,12 @@ vdplot <- function(object,
   
   if(!is.null(fvar)){
     if(!is.factor(object$data[[fvar]])){
-=======
-# object=orsf
-# xvar='sex'
-# times=1:10
-# data=pbc
-# fvar = 'ascites'
-# flab = NULL
-# time_units='years'
-# xlab=xvar
-# xvar_units = NULL
-# nonevent_lab="survival"
-# include.hist=TRUE
-
-vdplot <- function(object,xvar,times,data,include.hist=TRUE,
-                   nonevent_lab="survival",
-                   fvar=NULL,flab=NULL,time_units="years",
-                   xlab=xvar,xvar_units=NULL,xlvls=NULL){
-  
-  ntimes=length(times)
-  nxvals=length(unique(data[[xvar]]))
-  
-  if(!is.null(fvar)){
-    if(!is.factor(data[[fvar]])){
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
       stop("facet variable must be a factor") 
     }
   }
   
   if(is.null(flab) & !is.null(fvar)){
-<<<<<<< HEAD
     flab=paste(fvar,'=',levels(object$data[[fvar]]))
-=======
-    flab=paste(fvar,'=',levels(data[[fvar]]))
-  }
-  
-  if(nxvals<4 & !is.factor(data[[xvar]])){
-    warning("xvar has < 4 unique values but is not a factor")
-  }
-  
-  if(class(object)[1]=='orsf'){
-    prds=predictSurvProb(object,newdata=data,times=times)
-  } else {
-    prds=object
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
   }
   
   if(nxvals<4 & !is.factor(object$data[[xvar]])){
@@ -124,18 +82,11 @@ vdplot <- function(object,xvar,times,data,include.hist=TRUE,
   
   ggdat=na.omit(ggdat)
   
-<<<<<<< HEAD
   if(is.factor(object$data[[xvar]])){
     if(is.null(xlvls)) xlvls=levels(object$data[[xvar]])
     if(is.null(xlab)) xlab=xvar
     ggdat$xvar=factor(ggdat$xvar,labels=xlvls)
     if(is.null(xvar_units)) xvar_units=levels(object$data[[xvar]])
-=======
-  if(is.factor(data[[xvar]])){
-    if(is.null(xlab)) xlab=levels(data[[xvar]])
-    ggdat$xvar=factor(ggdat$xvar,labels=xlab)
-    if(is.null(xvar_units)) xvar_units=levels(data[[xvar]])
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
   } 
   
   if(ntimes>1){
@@ -144,7 +95,6 @@ vdplot <- function(object,xvar,times,data,include.hist=TRUE,
                                    levels=letters[1:ntimes],
                                    labels=paste(times)))
     
-<<<<<<< HEAD
     if(is.factor(object$data[[xvar]])){
 
       p=ggplot(ggdat,aes_string(x='time',y='pred',col='xvar'))+
@@ -160,19 +110,6 @@ vdplot <- function(object,xvar,times,data,include.hist=TRUE,
         labs(y=paste0("Probability of ",nonevent_lab),
              x=paste0("Time since baseline, ",time_units),
              col=xlab)+
-=======
-    if(is.factor(data[[xvar]])){
-
-      p=ggplot(ggdat,aes_string(x='time',y='pred',col='xvar'))+
-        geom_point(position=position_jitterdodge(dodge.width = 1/2),
-                   size=3/4, alpha=1/3)+
-        stat_summary(fun.data = mean_cl_boot,size=1, 
-                     position=position_dodge(width=1/2))+
-        scale_color_viridis_d(end=0.75)+
-        labs(y=paste0("Probability of ",nonevent_lab),
-             x=paste0("Time since baseline, ",time_units),
-             col=xvar)+
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
         theme_Publication()+
         scale_x_discrete(labels = 1:ntimes)+
         theme(legend.position = 'right',
@@ -188,27 +125,16 @@ vdplot <- function(object,xvar,times,data,include.hist=TRUE,
         scale_color_viridis_d()+
         geom_smooth(se=F,method='gam',formula=y~s(x),size=1.2)+
         labs(y=paste0("Probability of ",nonevent_lab),
-<<<<<<< HEAD
              x=paste0(xlab,', ',xvar_units),
-=======
-             x=paste(xlab,xvar_units,collapse=', '),
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
              col=paste0("Time since \nbaseline",time_units))+
         theme_Publication()+
         theme(legend.position = 'right',
               legend.direction = 'vertical')
   }
-<<<<<<< HEAD
     
   } else if (ntimes==1) {
     
     if(is.factor(object$data[[xvar]])){
-=======
-    
-  } else if (ntimes==1) {
-    
-    if(is.factor(data[[xvar]])){
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
       
       p=ggplot(ggdat,aes_string(x='xvar',y='pred'))+
         geom_boxplot()+
@@ -221,12 +147,8 @@ vdplot <- function(object,xvar,times,data,include.hist=TRUE,
     } else {
      
       p=ggplot(ggdat,aes_string(x='xvar',y='pred'))+
-<<<<<<< HEAD
         stat_smooth(se=T,method='gam',formula=y~s(x),
                     size=1.4,col='red', fill='grey80')+
-=======
-        geom_smooth(se=T,method='gam',formula=y~s(x),size=1.2,col='red')+
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
         labs(y=paste0("Probability of ",nonevent_lab,
                       " at ",times," ",time_units),
              x=paste0(xlab,', ', xvar_units))+
@@ -236,22 +158,13 @@ vdplot <- function(object,xvar,times,data,include.hist=TRUE,
     
   }
   
-<<<<<<< HEAD
   if(include.hist&!is.factor(object$data[[xvar]])){
-=======
-  if(include.hist&!is.factor(data[[xvar]])){
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
     ..density..=NULL
     p=p+geom_histogram(
       aes(x=xvar,y=scales::rescale(
         ..density..,to=c(0,max(min(prds),1/3)))),
       inherit.aes=F,fill='grey50',alpha=1/3,col='white')
   }
-<<<<<<< HEAD
-=======
-  
-  return(if(is.null(fvar)) p else p+facet_wrap(~fvar))
->>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
   
   if(is.null(fvar)){
     p+scale_y_continuous(labels=scales::percent)+
@@ -263,34 +176,4 @@ vdplot <- function(object,xvar,times,data,include.hist=TRUE,
 }
 
 
-theme_Publication <- function(base_size=16) {
-  
-  (theme_foundation(base_size=base_size)+ 
-     theme(plot.title = element_text(face = "bold",
-                                     size = rel(1), hjust = 0.5),
-           text = element_text(),
-           panel.background = element_rect(colour = NA),
-           plot.background = element_rect(fill = "transparent",colour = NA),
-           panel.border = element_rect(colour = 'black'),
-           legend.key.size = unit(3,"line"),
-           legend.key.height = unit(3,"line"),
-           axis.title = element_text(face = "bold",size = rel(1)),
-           axis.title.y = element_text(angle=90,vjust =2),
-           axis.title.x = element_text(vjust = -0.2),
-           axis.text = element_text(size=rel(1)),
-           axis.line = element_blank(), 
-           axis.ticks = element_line(),
-           panel.grid.major = element_blank(), 
-           panel.grid.minor = element_blank(),
-           legend.key = element_rect(colour = NA),
-           legend.position = "bottom",
-           legend.direction = "horizontal",
-           legend.title = element_text(face="italic"),
-           legend.text = element_text(size=rel(1)),
-           plot.margin=unit(c(10,5,5,5),"mm"),
-           strip.background=element_rect(colour="black",fill="#f0f0f0"),
-           strip.text = element_text(size=rel(1), face="bold")
-     ))
-  
-}
 
