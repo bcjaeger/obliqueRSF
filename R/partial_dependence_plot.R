@@ -16,6 +16,7 @@
 #' @examples
 
 # object=orsf
+<<<<<<< HEAD
 # xvar='bili'
 # xvals=NULL
 # ytype=c("event","nonevent")
@@ -46,12 +47,39 @@
 # if(!is.null(sub_times)){
 #   prds=prds[,which(times%in%sub_times)]
 #   times=times[times%in%sub_times]
+=======
+# data=na.omit(pbc)
+# xvar='sex'
+# xvals=NULL
+# times=c(10)
+# include.hist=TRUE
+# nonevent_lab='survival'
+# fvar=NULL
+# flab=NULL
+# time_units='years'
+# xlab='Serum bilirubin'
+# xvar_units='mg/ul'
+
+# if(is.factor(data[[xvar]])){
+#   
+#   if(is.null(xvals)){
+#     xvals=levels(data[[xvar]])
+#   }
+#   
+# } else {
+#  
+#   if(is.null(xvals)){
+#     xvals=sort(unique(data[[xvar]]))
+#   }
+#    
+>>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
 # }
 # 
 # nx = length(xvals)
 # nt = length(times)
 # indx=1:nt
 # 
+<<<<<<< HEAD
 # if(!is.null(fvar)){
 #   gg_fvar = levels(object$data[[fvar]])
 # } else {
@@ -143,3 +171,27 @@
 # }
 
   
+=======
+# ggdat=expand.grid(x=xvals,time=times)%>%dplyr::arrange(x)
+# ggdat$pred_mean=ggdat$pred_sd=0
+# 
+# for(i in 1:nx){
+#   
+#   data[[xvar]]=xvals[i]
+#   prds=predict(object,newdata=data,times=times)
+#   ggdat[indx,'pred_mean']=apply(prds,2,mean)
+#   ggdat[indx,'pred_sd']=apply(prds,2,sd)
+#   indx=indx+nt
+#   
+# }
+# 
+# ggdat %>% 
+#   mutate(pred_se=pred_sd/sqrt(nrow(data)),
+#          ymin=pred_mean-1.96*pred_se,
+#          ymax=pred_mean+1.96*pred_se) %>%
+#   ggplot(aes(x=x, y=pred_mean, ymin=ymin, ymax=ymax, group=time))+
+#   geom_errorbar(col='grey60',width=0.1)+
+#   geom_line(col='grey60')+
+#   geom_point(col='red',size=2)+
+#   theme_Publication()
+>>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048

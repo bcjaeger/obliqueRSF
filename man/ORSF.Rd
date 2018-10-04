@@ -9,7 +9,11 @@ ORSF(data, alpha = 0.5, ntree = 100, time = "time",
   min_events_to_split_node = 10, min_obs_to_split_node = 10,
   min_obs_in_leaf_node = 3, min_events_in_leaf_node = 10,
   nsplit = 15, max_pval_to_split_node = 0.05,
+<<<<<<< HEAD
   mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = FALSE,
+=======
+  mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = TRUE,
+>>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
   verbose = TRUE, random_seed = NULL)
 }
 \arguments{

@@ -67,6 +67,7 @@ pbc = pbc %>%
          edema=factor(edema),
          stage=factor(stage,ordered=TRUE),
          time=time/365.25) 
+<<<<<<< HEAD
 
 orsf=ORSF(data=pbc, # data to fit trees with
           ntree=200, # number of trees to fit
@@ -102,6 +103,24 @@ vdplot(object=orsf, xvar='albumin', xlab='Serum albumin',
 
 
 ```{r}
+=======
+
+set.seed(62689)
+eval_times=1:10
+
+orsf=ORSF(data=pbc,ntree=300,eval_times=eval_times,verbose=F)
+
+
+# Variable dependence plot
+vdplot(object=orsf$oob_preds[,5], xvar='bili', xlab='Bilirubin levels',
+       times=eval_times[5], data=orsf$imputed_data, xvar_units = 'mg/dl')
+
+vdplot(object=orsf$oob_preds, xvar='sex', xlab=c("male","female"),
+       times=eval_times, data=orsf$imputed_data, fvar='hepato')
+
+vdplot(object=orsf$oob_preds, xvar='trt', xlab=c("placebo","treatment"),
+       times=eval_times, data=orsf$imputed, fvar='edema')
+>>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
 
 # A categorical variable, sex, which interacts with hepato.
 vdplot(object=orsf, xvar='sex', xlab=c("Sex"), xlvls=c("Male","Female"),

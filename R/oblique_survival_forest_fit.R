@@ -202,7 +202,7 @@ ORSF <- function(data,
     class = "orsf")
   
   output$imputation_used= if(use_imputation) TRUE else FALSE 
-  
+
   return(output)
   
 }

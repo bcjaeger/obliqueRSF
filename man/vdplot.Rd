@@ -4,15 +4,29 @@
 \alias{vdplot}
 \title{Plot variable dependence using an oblique random survival forest}
 \usage{
+<<<<<<< HEAD
 vdplot(object, xvar, include.hist = TRUE, nonevent_lab = "survival",
   fvar = NULL, flab = NULL, time_units = "years", xlab = xvar,
   xvar_units = NULL, xlvls = NULL, sub_times = NULL)
+=======
+vdplot(object, xvar, times, data, include.hist = TRUE,
+  nonevent_lab = "survival", fvar = NULL, flab = NULL,
+  time_units = "years", xlab = xvar, xvar_units = NULL,
+  xlvls = NULL)
+>>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
 }
 \arguments{
 \item{object}{an ORSF object (i.e. object returned from the ORSF function)}
 
 \item{xvar}{a string giving the name of the x-axis variable}
 
+<<<<<<< HEAD
+=======
+\item{times}{a vector of times to compute predicted survival probabilities}
+
+\item{data}{a dataframe to be used for predictions and x-values in the plot}
+
+>>>>>>> 4e074d9fab369ad9f248427b54103a8c0ea29048
 \item{include.hist}{if true, a histogram showing the distribution of values for the x-axis variable will be included at the bottom of the plot.}
 
 \item{nonevent_lab}{the label that describes a non-event.}
