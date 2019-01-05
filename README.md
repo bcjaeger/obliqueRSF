@@ -21,8 +21,6 @@ Usage
 The `ORSF` function is the center piece of the `obliqueRSF` package
 
 ``` r
-
-
 data("pbc",package='survival')
 
 # event is death
@@ -54,13 +52,11 @@ orsf=ORSF(data=pbc, # data to fit trees with
 #>   missForest iteration 3 in progress...done!
 #>   missForest iteration 4 in progress...done!
 #>   missForest iteration 5 in progress...done!
-#>   missForest iteration 6 in progress...done!
 ```
 
 The `vdplot` function allows you to quickly look at the patterns in the predictions from an ORSF.
 
 ``` r
-
 # Variable dependence plot (vdplot)
 
 # Survival probabilities for a continuous variable
@@ -72,39 +68,38 @@ vdplot(object=orsf, xvar='bili', xlab='Bilirubin levels',
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-![](README-unnamed-chunk-2-1.png)
+![](man/figures/vdplot1-1.png)
 
 here is another application of `vdplot` with a continuous x-variable, but this time we will show predictions at three times: 1 year, 3 years, and 5 years since baseline.
 
 ``` r
-
 vdplot(object=orsf, xvar='albumin', xlab='Serum albumin', 
        xvar_units = 'g/dl', sub_times = c(1,3,5))
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-![](README-unnamed-chunk-3-1.png)
+![](man/figures/vdplot2-1.png)
 
 The `vdplot` function also supports categorical x-variables. Setting the x-variable to `sex`, and the facet variable to `hepato`, we find a clear interaction between sex and the presence of an enlarged liver (i.e., `hepato=1`).
 
 ``` r
-
-
 vdplot(object=orsf, xvar='sex', xlab=c("Sex"), xlvls=c("Male","Female"),
        fvar='hepato',flab=c("Normal size liver","Enlarged liver"))
 ```
 
-![](README-unnamed-chunk-4-1.png)
+![](man/figures/vdplot3-1.png)
 
 Is this interaction something that is purely explained by sex, or is it a confounding effect from other variables that are not the same between the two sexes? We can address this using the partial dependence plot (`pdplot`) function:
 
 ``` r
-
 pdplot(object=orsf, xvar='sex',xlab='Sex', xlvls=c("Male","Female"),
-       fvar='hepato',flvls=c("Normal size liver","Enlarged liver"))
+       fvar='hepato',flvls=c("Normal size liver","Enlarged liver"),
+       sub_times=c(1,3,5,7,9))
 ```
 
-![](README-unnamed-chunk-5-1.png)
+![](man/figures/pdplot1-1.png)
+
+Taking into account the effects of other variables in the data, the interaction between sex and hepato is attenuated.
 
 Performance
 ===========
@@ -120,7 +115,7 @@ Performance
 
 pbc_cmp=na.omit(pbc)
 
-ntree=100
+ntree=150
 nsize=20
 
 mdls=list(
@@ -188,8 +183,8 @@ print(bri_score)
 #> 
 #>           IBS[0;time=12.4)
 #> Reference            0.201
-#> orsf                 0.137
-#> rsf                  0.146
+#> orsf                 0.138
+#> rsf                  0.147
 #> bws                  0.159
 #> cboost               0.143
 
@@ -236,10 +231,10 @@ print(cnc_index)
 #> Estimated C-index in % at time=11.5 
 #> 
 #>        AppCindex BootCvCindex
-#> orsf        83.3         80.5
-#> rsf         87.9         78.1
-#> bws         75.1         72.3
-#> cboost      78.7         78.7
+#> orsf        83.0         80.5
+#> rsf         87.4         78.6
+#> bws         75.1         72.5
+#> cboost      78.8         77.2
 #> 
 #> AppCindex    : Apparent (training data) performance
 #> BootCvCindex : Bootstrap crossvalidated performance

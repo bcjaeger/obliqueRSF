@@ -20,6 +20,7 @@
 #' @return A ggplot2 object showing partial dependence according to the oblique random survival forest object.
 #' @export
 #' @examples
+#'\dontrun{
 #' data("pbc",package='survival')
 #' pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 #' pbc$time=pbc$time/365.25
@@ -28,11 +29,11 @@
 #' for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 #' pbc=na.omit(pbc)
 #'
-#' orsf=ORSF(data=pbc, eval_time=1:10)
+#' orsf=ORSF(data=pbc, eval_time=1:10,ntree=30)
 #' 
 #' pdplot(object=orsf, xvar='bili', xlab='Bilirubin', 
 #'        xvar_units='mg/dl', sub_times=10)
-#'
+#'}
 
 pdplot <- function(object,
                    xvar,
@@ -40,7 +41,7 @@ pdplot <- function(object,
                    xvar_units=NULL,
                    xvals=NULL,
                    nxpts=10,
-                   ytype=c("nonevent","event"),
+                   ytype="nonevent",
                    event_lab='death',
                    nonevent_lab='survival',
                    fvar=NULL,

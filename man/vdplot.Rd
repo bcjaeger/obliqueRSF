@@ -4,9 +4,11 @@
 \alias{vdplot}
 \title{Plot variable dependence using an oblique random survival forest}
 \usage{
-vdplot(object, xvar, include.hist = TRUE, nonevent_lab = "survival",
-  fvar = NULL, flab = NULL, time_units = "years", xlab = xvar,
-  xvar_units = NULL, xlvls = NULL, sub_times = NULL)
+vdplot(object, xvar, include.hist = TRUE, include.points = FALSE,
+  ptsize = 0.75, ytype = "nonevent", event_lab = "death",
+  nonevent_lab = "survival", fvar = NULL, flab = NULL,
+  time_units = "years", xlab = xvar, xvar_units = NULL,
+  xlvls = NULL, sub_times = NULL, se.show = FALSE)
 }
 \arguments{
 \item{object}{an ORSF object (i.e. object returned from the ORSF function)}
@@ -15,7 +17,15 @@ vdplot(object, xvar, include.hist = TRUE, nonevent_lab = "survival",
 
 \item{include.hist}{if true, a histogram showing the distribution of values for the x-axis variable will be included at the bottom of the plot.}
 
-\item{nonevent_lab}{the label that describes a non-event.}
+\item{include.points}{if true, the predictions for each observation are plotted along with a smoothed population estimate. Note that points are always included if xvar is categorical.}
+
+\item{ptsize}{only relevant if include.points = TRUE. The size of the points in the plot are determined by this numeric value.}
+
+\item{ytype}{String. Use 'event' if you would like to plot the probability of the event, and 'nonevent' if you prefer to plot the probability of a non-event.}
+
+\item{event_lab}{string that describes the event}
+
+\item{nonevent_lab}{string that describes a non-event.}
 
 \item{fvar}{(optional) a string indicating a variable to facet the plot with}
 
@@ -29,7 +39,9 @@ vdplot(object, xvar, include.hist = TRUE, nonevent_lab = "survival",
 
 \item{xlvls}{a character vector giving the labels that correspond to categorical xvar. This does not need to be specified if xvar is continuous.}
 
-\item{sub_times}{sometimes you just want}
+\item{sub_times}{the times you would like to plot predicted values for. If left unspecified, the ORSF function will use all of the times in oob_times.}
+
+\item{se.show}{if true, standard errors of the population estimate will be included in the plot.}
 }
 \value{
 A ggplot2 object
@@ -38,7 +50,7 @@ A ggplot2 object
 Plot variable dependence using an oblique random survival forest
 }
 \examples{
-
+\dontrun{
 data("pbc",package='survival')
 pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 pbc$time=pbc$time/365.25
@@ -47,8 +59,8 @@ fctrs<-c('trt','ascites','spiders','edema','hepato','stage')
 for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 pbc=na.omit(pbc)
 
-orsf=ORSF(data=pbc, eval_time=5)
+orsf=ORSF(data=pbc, eval_time=5, ntree=30)
 
 vdplot(object=orsf, xvar='bili', xlab='Bilirubin', xvar_units='mg/dl')
-
+}
 }

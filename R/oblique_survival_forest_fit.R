@@ -21,7 +21,6 @@
 #' @return An oblique random survival forest.
 #' @export
 #' @examples
-#'
 #' data("pbc",package='survival')
 #' pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 #' pbc$id=NULL
@@ -29,7 +28,8 @@
 #' for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 #' pbc=na.omit(pbc)
 #'
-#' orsf=ORSF(data=pbc)
+#' orsf=ORSF(data=pbc,ntree=5)
+#' 
 
 ORSF <- function(data,
                  alpha=0.50,
@@ -38,12 +38,12 @@ ORSF <- function(data,
                  status='status',
                  eval_times=NULL,
                  features=NULL,
-                 min_events_to_split_node=10,
+                 min_events_to_split_node=5,
                  min_obs_to_split_node=10,
-                 min_obs_in_leaf_node=3,
-                 min_events_in_leaf_node=10,
-                 nsplit=15,
-                 max_pval_to_split_node=0.05,
+                 min_obs_in_leaf_node=5,
+                 min_events_in_leaf_node=1,
+                 nsplit=25,
+                 max_pval_to_split_node=0.50,
                  mtry=ceiling(sqrt(ncol(data)-2)),
                  dfmax=mtry,
                  use.cv=FALSE,
@@ -105,12 +105,17 @@ ORSF <- function(data,
     cols=cols+1
     
     out = purrr::map(alpha, .f=function(a){
-      fit <- suppressWarnings(glmnet::glmnet(
+      fit <- try(suppressWarnings(glmnet::glmnet(
         dmat[indx,cols],
         survival::Surv(time[indx],status[indx]),
         family="cox",
         alpha=a,
-        dfmax=dfmax))
+        dfmax=dfmax)), silent = TRUE)
+      
+      if(class(fit)[1]=='try-error'){
+        return(as.matrix(cbind(rep(0,dfmax))))
+      }
+      
       dfs=unique(fit$df)
       dfs=dfs[dfs>=1]
       if(length(dfs)>=1){
@@ -126,19 +131,43 @@ ORSF <- function(data,
   }
   
   cv.netR <- function(dmat,time,status,indx,cols,dfmax,alpha){
+    
     indx=indx+1
     cols=cols+1
+    
     out = purrr::map(alpha, .f=function(a){
-      cv.fit <- suppressWarnings(glmnet::cv.glmnet(
+      cv.fit <- try(suppressWarnings(glmnet::cv.glmnet(
         dmat[indx,cols],
         survival::Surv(time[indx],status[indx]),
         family="cox", keep = FALSE, grouped = TRUE,
-        alpha=a, nfolds=min(5,length(indx)), dfmax=dfmax))
-      as.matrix(cbind(
-        coef(cv.fit, cv.fit$lambda[min(which(cv.fit$glmnet.fit$df>0))]),
-        coef(cv.fit,'lambda.1se'),
-        coef(cv.fit,'lambda.min')
-      ))
+        alpha=a, nfolds=min(5,length(indx)), dfmax=dfmax)),
+        silent = TRUE)
+      
+      if(class(cv.fit)[1]=='try-error'){
+        return(as.matrix(cbind(rep(0,dfmax))))
+      }
+      
+      res=suppressWarnings(try(
+        as.matrix(cbind(
+          coef(cv.fit, cv.fit$lambda[min(which(cv.fit$glmnet.fit$df>0))]),
+          coef(cv.fit,'lambda.1se'),
+          coef(cv.fit,'lambda.min'))),
+      silent=TRUE))
+      
+      if(class(res)[1]=='try-error'){
+        res=try(
+          as.matrix(cbind(
+            coef(cv.fit,'lambda.1se'),
+            coef(cv.fit,'lambda.min'))),
+        silent=TRUE)
+      }
+      
+      if(class(res)[1]=='try-error'){
+        res=try(as.matrix(cbind(rep(0,dfmax))))
+      }
+      
+      res
+
     })
     purrr::reduce(out, cbind)
   }
@@ -146,12 +175,11 @@ ORSF <- function(data,
   fevalR <- function(prd,time,status,eval.times){
     
     ntimes=length(eval.times)
-    conc=pec::cindex(matrix(prd[,ntimes],ncol=1),
+    conc=pec::cindex(prd,
                      formula=Surv(time,status)~1,
-                     eval.times=eval.times[ntimes],
+                     eval.times=eval.times,
                      data=data.frame(time=time,status=status))
-    
-    conc=conc$AppCindex$matrix
+    conc=mean(conc$AppCindex$matrix,na.rm=T)
     
     intbs=suppressMessages(pec::crps(pec::pec(
       list(ORSF=prd),times=eval.times,exact=F,

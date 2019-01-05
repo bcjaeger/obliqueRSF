@@ -6,7 +6,7 @@
 \alias{obliqueRSF-package}
 \title{Oblique Random Survival Forests}
 \description{
-Oblique random survival forest (ORSFs) are ensembles for right-censured survival data that use linear combinations of input variables to recursively partition a set of training data. Regularized Cox proportional hazard models identify optimal linear combinations of input variables in each recursive partitioning step while building survival trees.
+Oblique random survival forest are ensembles for right-censored survival data that incorporate linear combinations of input variables into random survival forests (see Ishwaran et al., 2008 <doi:10.1214/08-AOAS169>). Regularized Cox proportional hazard models (see Simon et al., 2016 <doi:10.18637/jss.v039.i05>) identify optimal linear combinations of input variables in each recursive partitioning step while building survival trees (see Bou-hamad et al., 2011 <doi: 10.1214/09-SS047>).
 }
 \author{
 Byron C. Jaeger <bcjaeger@uab.edu>

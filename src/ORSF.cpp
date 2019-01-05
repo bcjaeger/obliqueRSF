@@ -176,7 +176,7 @@ NumericMatrix predict_orsf(List forest,
   
   List newx_attr = newx.attr("dimnames");
   CharacterVector ftrs = newx_attr[1];
-  int ntree = forest.length();
+  //int ntree = forest.length();
   
   NumericMatrix output(newx.nrow(), times.length());
   //NumericMatrix mat(ntree, times.length());
@@ -186,6 +186,8 @@ NumericMatrix predict_orsf(List forest,
     // create a vector of inputs for observation with given indx
     NumericVector vec = newx(indx,_); vec.names() = ftrs;
     NumericVector predvec(times.length());
+    int divby = 0;
+    
     //int mat_row_counter=0;
     List::iterator tree;
     
@@ -221,12 +223,15 @@ NumericMatrix predict_orsf(List forest,
                                    times);
       
       //Rcpp::Rcout << preds << std::endl;
-      predvec+=preds;
+      predvec+=preds*current_node["nevents"];
+      divby+=as<int>(current_node["nevents"]);
       //mat(mat_row_counter,_) = preds;
       //mat_row_counter++;
     }
     
-    output(indx,_) = predvec/ntree;
+    output(indx,_) = predvec/divby;
+    Rcpp::Rcout << divby << std::endl;
+    
     //output(indx,_) = colmeans(mat);
     
   }

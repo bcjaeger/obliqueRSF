@@ -8,7 +8,7 @@
 #' @return A matrix of survival probabilities containing 1 row for each observation and 1 column for each value in times.
 #' @export
 #' @examples
-#' 
+#'\dontrun{
 #' data("pbc",package='survival')
 #' pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 #' pbc$id=NULL
@@ -16,10 +16,11 @@
 #' for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 #' pbc=na.omit(pbc)
 #'
-#' orsf=ORSF(data=pbc)
+#' orsf=ORSF(data=pbc,ntree=30)
 #' times=seq(365, 365*4,length.out = 10)
 #'
 #' predict(orsf,newdata=pbc[c(1:5),],times=times)
+#' }
 
 predictSurvProb.orsf <- function(object, newdata, times, ...){
 

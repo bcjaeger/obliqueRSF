@@ -5,7 +5,7 @@
 \title{Plot partial variable dependence using an oblique random survival forest}
 \usage{
 pdplot(object, xvar, xlab = NULL, xvar_units = NULL, xvals = NULL,
-  nxpts = 10, ytype = c("nonevent", "event"), event_lab = "death",
+  nxpts = 10, ytype = "nonevent", event_lab = "death",
   nonevent_lab = "survival", fvar = NULL, flab = NULL,
   flvls = NULL, time_units = "years", xlvls = NULL,
   sub_times = NULL, separate_panels = TRUE, color_palette = "Dark2")
@@ -52,6 +52,7 @@ A ggplot2 object showing partial dependence according to the oblique random surv
 Plot partial variable dependence using an oblique random survival forest
 }
 \examples{
+\dontrun{
 data("pbc",package='survival')
 pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 pbc$time=pbc$time/365.25
@@ -60,9 +61,9 @@ fctrs<-c('trt','ascites','spiders','edema','hepato','stage')
 for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 pbc=na.omit(pbc)
 
-orsf=ORSF(data=pbc, eval_time=1:10)
+orsf=ORSF(data=pbc, eval_time=1:10,ntree=30)
 
 pdplot(object=orsf, xvar='bili', xlab='Bilirubin', 
        xvar_units='mg/dl', sub_times=10)
-
+}
 }

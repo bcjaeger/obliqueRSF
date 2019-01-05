@@ -6,11 +6,10 @@
 \usage{
 ORSF(data, alpha = 0.5, ntree = 100, time = "time",
   status = "status", eval_times = NULL, features = NULL,
-  min_events_to_split_node = 10, min_obs_to_split_node = 10,
-  min_obs_in_leaf_node = 3, min_events_in_leaf_node = 10,
-  nsplit = 15, max_pval_to_split_node = 0.05,
-  mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = FALSE,
-  verbose = TRUE, random_seed = NULL)
+  min_events_to_split_node = 5, min_obs_to_split_node = 10,
+  min_obs_in_leaf_node = 5, min_events_in_leaf_node = 1, nsplit = 25,
+  max_pval_to_split_node = 0.5, mtry = ceiling(sqrt(ncol(data) - 2)),
+  dfmax = mtry, use.cv = FALSE, verbose = TRUE, random_seed = NULL)
 }
 \arguments{
 \item{data}{The data used to grow the forest.}
@@ -56,7 +55,6 @@ An oblique random survival forest.
 Grow an oblique random survival forest (ORSF)
 }
 \examples{
-
 data("pbc",package='survival')
 pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 pbc$id=NULL
@@ -64,5 +62,6 @@ fctrs<-c('trt','ascites','spiders','edema','hepato','stage')
 for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 pbc=na.omit(pbc)
 
-orsf=ORSF(data=pbc)
+orsf=ORSF(data=pbc,ntree=5)
+
 }

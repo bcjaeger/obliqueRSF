@@ -9,7 +9,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   fig.width = 12, fig.height=7,
   comment = "#>",
-  fig.path = "README-"
+  fig.path = "man/figures/"
 )
 
 require(tidyverse,quietly=TRUE)
@@ -21,7 +21,7 @@ require(CoxBoost,quietly=TRUE)
 require(obliqueRSF,quietly=TRUE)
 require(ggthemes, quietly=TRUE)
 
-nboots=50
+nboots=5
 
 ```
 
@@ -39,7 +39,6 @@ You can install obliqueRSF from github with:
 # install.packages("devtools")
 devtools::install_github("bcjaeger/obliqueRSF")
 ```
-
 
 # Usage
 
@@ -75,7 +74,7 @@ orsf=ORSF(data=pbc, # data to fit trees with
 
 The `vdplot` function allows you to quickly look at the patterns in the predictions from an ORSF.
 
-```{r}
+```{r vdplot1}
 # Variable dependence plot (vdplot)
 
 # Survival probabilities for a continuous variable
@@ -88,24 +87,27 @@ vdplot(object=orsf, xvar='bili', xlab='Bilirubin levels',
 
 here is another application of `vdplot` with a continuous x-variable, but this time we will show predictions at three times: 1 year, 3 years, and 5 years since baseline.
 
-```{r}
+```{r vdplot2}
 vdplot(object=orsf, xvar='albumin', xlab='Serum albumin', 
        xvar_units = 'g/dl', sub_times = c(1,3,5))
 ```
 
 The `vdplot` function also supports categorical x-variables. Setting the x-variable to `sex`, and the facet variable to `hepato`,  we find a clear interaction between sex and the presence of an enlarged liver (i.e., `hepato=1`).
 
-```{r}
+```{r vdplot3}
 vdplot(object=orsf, xvar='sex', xlab=c("Sex"), xlvls=c("Male","Female"),
        fvar='hepato',flab=c("Normal size liver","Enlarged liver"))
 ```
 
 Is this interaction something that is purely explained by sex, or is it a confounding effect from other variables that are not the same between the two sexes? We can address this using the partial dependence plot (`pdplot`) function:
 
-```{r, fig.width=16}
+```{r pdplot1, fig.width=16}
 pdplot(object=orsf, xvar='sex',xlab='Sex', xlvls=c("Male","Female"),
-       fvar='hepato',flvls=c("Normal size liver","Enlarged liver"))
+       fvar='hepato',flvls=c("Normal size liver","Enlarged liver"),
+       sub_times=c(1,3,5,7,9))
 ```
+
+Taking into account the effects of other variables in the data, the interaction between sex and hepato is attenuated. 
 
 # Performance
 

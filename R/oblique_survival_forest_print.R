@@ -6,7 +6,7 @@
 #' @return A printed summary of the oblique random survival forest.
 #' @export
 #' @examples
-#'
+#'\dontrun{
 #' data("pbc",package='survival')
 #' pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 #' pbc$id=NULL
@@ -14,8 +14,9 @@
 #' for(f in fctrs)pbc[[f]]=as.factor(pbc[[f]])
 #' pbc=na.omit(pbc)
 #'
-#' orsf=ORSF(data=pbc)
+#' orsf=ORSF(data=pbc,ntree=30)
 #' print(orsf)
+#' }
 
 print.orsf <- function(x,...){
   cat('\nOblique Random Survival Forest: ')
