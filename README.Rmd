@@ -46,6 +46,7 @@ The `ORSF` function is the center piece of the `obliqueRSF` package
 
 
 ```{r usage, echo=TRUE,fig.width=10,fig.height=6}
+
 data("pbc",package='survival')
 
 # event is death
@@ -66,10 +67,10 @@ pbc = pbc %>%
          time=time/365.25) 
 
 orsf=ORSF(data=pbc, # data to fit trees with
-          ntree=200, # number of trees to fit
+          ntree=100, # number of trees to fit
           eval_times=c(1:10), # when will predictions be made?
           # note: eval_times will be used to make figures
-          verbose=F) # suppresses console output
+          verbose=T) # suppresses console output
 ```
 
 The `vdplot` function allows you to quickly look at the patterns in the predictions from an ORSF.

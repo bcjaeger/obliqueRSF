@@ -176,7 +176,7 @@ NumericMatrix predict_orsf(List forest,
   
   List newx_attr = newx.attr("dimnames");
   CharacterVector ftrs = newx_attr[1];
-  //int ntree = forest.length();
+  int ntree = forest.length();
   
   NumericMatrix output(newx.nrow(), times.length());
   //NumericMatrix mat(ntree, times.length());
@@ -186,8 +186,6 @@ NumericMatrix predict_orsf(List forest,
     // create a vector of inputs for observation with given indx
     NumericVector vec = newx(indx,_); vec.names() = ftrs;
     NumericVector predvec(times.length());
-    int divby = 0;
-    
     //int mat_row_counter=0;
     List::iterator tree;
     
@@ -223,15 +221,12 @@ NumericMatrix predict_orsf(List forest,
                                    times);
       
       //Rcpp::Rcout << preds << std::endl;
-      predvec+=preds*current_node["nevents"];
-      divby+=as<int>(current_node["nevents"]);
+      predvec+=preds;
       //mat(mat_row_counter,_) = preds;
       //mat_row_counter++;
     }
     
-    output(indx,_) = predvec/divby;
-    Rcpp::Rcout << divby << std::endl;
-    
+    output(indx,_) = predvec/ntree;
     //output(indx,_) = colmeans(mat);
     
   }
@@ -513,6 +508,7 @@ List tune_node(NumericMatrix& dmat,
                int& min_obs_in_leaf_node,
                int& min_events_in_leaf_node,
                int& nsplit,
+               double gamma,
                double mincriterion){
   
   double best_lrstat=0;
@@ -585,8 +581,9 @@ List tune_node(NumericMatrix& dmat,
              (s0>=min_events_in_leaf_node)){
             
             lrstat=lrtestC(time_indx, status_indx, tmp_grp);
+            lrstat=lrstat / (1 + u*gamma);
             
-            //Rcout<<"LR stat for this cut: "<<lrstat<<std::endl;
+            //Rcout<<"LR stat for this cut: "<<lrstat<<", DF: "<<u<<std::endl;
             
             if(lrstat>mincriterion){
               output["not_splittable"]=false;
@@ -627,6 +624,7 @@ List OST(NumericMatrix dmat,
          int mtry,
          int dfmax,
          int nsplit,
+         double gamma,
          double mincriterion,
          Function surv_KM_Rfun,
          Function glmnet_Rfun){
@@ -723,6 +721,7 @@ List OST(NumericMatrix dmat,
                                       min_obs_in_leaf_node,
                                       min_events_in_leaf_node,
                                       nsplit,
+                                      gamma,
                                       mincriterion);
         
         if(Rcpp::as<bool>(split_status["not_splittable"])){
@@ -853,14 +852,17 @@ List ORSFcpp(NumericMatrix dmat,
              int dfmax,
              int nsplit,
              int ntree,
+             double gamma,
              double mincriterion,
              bool verbose,
+             bool compute_oob,
              Function surv_KM_Rfun,
              Function bootstrap_Rfun,
              Function glmnet_Rfun,
              Function forest_eval_Rfun){
   
   int n = dmat.nrow();
+  int n632 = ceil(n*0.632);
   IntegerVector orsf_ids=seq(0,n-1);
   
   IntegerVector inb;
@@ -870,7 +872,7 @@ List ORSFcpp(NumericMatrix dmat,
   
   for(int tree=0; tree < ntree; tree++){
     
-    inb = sample(orsf_ids, n, true);
+    inb = sample(orsf_ids, n632, false);
     
     tree_dat = boot_R(dmat,time,status,inb,bootstrap_Rfun);
     
@@ -891,115 +893,122 @@ List ORSFcpp(NumericMatrix dmat,
                      mtry, 
                      dfmax,
                      nsplit,
+                     gamma,
                      mincriterion,
                      surv_KM_Rfun,
                      glmnet_Rfun);
     
   }
   
-  //LogicalVector event_occurred = status==1;
-  //NumericVector event_times = time[event_occurred]; 
-  //long double   event_maxtime = max(event_times);
-  //long double   event_mintime = min(event_times);
-  //NumericVector eval_times = seql(event_mintime,event_maxtime,10);
-  NumericMatrix oob_pred(n, eval_times.length());
   
   // Compute out-of-bag predictions
-  for(int row=0; row < dmat.nrow(); row++){
+  
+  if(compute_oob){
     
-    // create a vector of inputs for observation with given row
-    NumericVector vec = dmat(row,_);
-    vec.names() = features;
+    NumericMatrix oob_pred(n, eval_times.length());
     
-    NumericVector oob_trees(ntree);
-    oob_trees.fill(-1);
-    int tree_counter = 0;
-    
-    for(int i=0; i<ntree; i++){
-      List ostree = forest[i];
-      NumericVector bstrap = ostree["bootstrap_ids"];
-      bool in_bag = false;
+    for(int row=0; row < dmat.nrow(); row++){
       
-      for(int j=0; j<bstrap.length(); j++){
-        if(bstrap[j]==row){
-          in_bag = true;
-          j = bstrap.length();
+      // create a vector of inputs for observation with given row
+      NumericVector vec = dmat(row,_);
+      vec.names() = features;
+      
+      NumericVector oob_trees(ntree);
+      oob_trees.fill(-1);
+      int tree_counter = 0;
+      
+      for(int i=0; i<ntree; i++){
+        List ostree = forest[i];
+        NumericVector bstrap = ostree["bootstrap_ids"];
+        bool in_bag = false;
+        
+        for(int j=0; j<bstrap.length(); j++){
+          if(bstrap[j]==row){
+            in_bag = true;
+            j = bstrap.length();
+          }
+        }
+        
+        if(!in_bag){
+          oob_trees[tree_counter]=i;
+          tree_counter = tree_counter+1;
         }
       }
       
-      if(!in_bag){
-        oob_trees[tree_counter]=i;
-        tree_counter = tree_counter+1;
+      oob_trees=oob_trees[oob_trees>=0];
+      
+      int ntree_oob = oob_trees.length();
+      
+      NumericMatrix mat(ntree_oob, eval_times.length());
+      
+      for(int i = 0; i < ntree_oob; i++) {
+        
+        int tree_row = oob_trees[i];
+        List ostree = forest[tree_row];
+        
+        // New observations start at the root of the tree
+        List nodes = ostree["nodes"];
+        List current_node = nodes["R"];
+        bool is_leaf = current_node["leaf"];
+        
+        while(!is_leaf){
+          
+          // Identify the children of the current node
+          CharacterVector children = current_node["children"];
+          
+          // Identify variables & coefficients for linear combos.
+          CharacterVector bvrs = current_node["bvrs"];
+          NumericVector vec_bvrs = vec[bvrs];
+          NumericVector nod_bwts = current_node["bwts"];
+          
+          // compute the current observation's linear combination of inputs
+          
+          double wt = innerprod(vec_bvrs, nod_bwts);
+          double ct_pnt = current_node["cut_pnt"];
+          
+          // Determine the next node for the current observation
+          String new_node = pick_node(wt,ct_pnt,children);
+          
+          // Identify this node in the list of nodes
+          current_node = nodes[new_node];
+          
+          // Assess whether this node is a leaf
+          is_leaf = current_node["leaf"];
+          
+        }
+        
+        NumericVector node_times=current_node["times"];
+        NumericVector node_probs=current_node["probs"];
+        
+        NumericVector preds = surv_est(node_times,
+                                       node_probs,
+                                       eval_times);
+        
+        //Rcpp::Rcout << preds << std::endl;
+        
+        mat(i,_) = preds;
+        
       }
+      
+      oob_pred(row,_) = colmeans(mat);
+      
     }
     
-    oob_trees=oob_trees[oob_trees>=0];
+    List oob_eval = forest_eval_Rfun(oob_pred,time,status,eval_times);
     
-    int ntree_oob = oob_trees.length();
+    List output = List::create(
+      Named("forest")=forest,
+      _["oob_error"]=oob_eval,
+      _["oob_preds"]=oob_pred);
     
-    NumericMatrix mat(ntree_oob, eval_times.length());
+    return output;
     
-    for(int i = 0; i < ntree_oob; i++) {
-      
-      int tree_row = oob_trees[i];
-      List ostree = forest[tree_row];
-      
-      // New observations start at the root of the tree
-      List nodes = ostree["nodes"];
-      List current_node = nodes["R"];
-      bool is_leaf = current_node["leaf"];
-      
-      while(!is_leaf){
-        
-        // Identify the children of the current node
-        CharacterVector children = current_node["children"];
-        
-        // Identify variables & coefficients for linear combos.
-        CharacterVector bvrs = current_node["bvrs"];
-        NumericVector vec_bvrs = vec[bvrs];
-        NumericVector nod_bwts = current_node["bwts"];
-        
-        // compute the current observation's linear combination of inputs
-        
-        double wt = innerprod(vec_bvrs, nod_bwts);
-        double ct_pnt = current_node["cut_pnt"];
-        
-        // Determine the next node for the current observation
-        String new_node = pick_node(wt,ct_pnt,children);
-        
-        // Identify this node in the list of nodes
-        current_node = nodes[new_node];
-        
-        // Assess whether this node is a leaf
-        is_leaf = current_node["leaf"];
-        
-      }
-      
-      NumericVector node_times=current_node["times"];
-      NumericVector node_probs=current_node["probs"];
-      
-      NumericVector preds = surv_est(node_times,
-                                     node_probs,
-                                     eval_times);
-      
-      //Rcpp::Rcout << preds << std::endl;
-      
-      mat(i,_) = preds;
-      
-    }
+  } else {
     
-    oob_pred(row,_) = colmeans(mat);
+    List output = List::create(Named("forest")=forest);
+    
+    return output;
     
   }
-  
-  List oob_eval = forest_eval_Rfun(oob_pred,time,status,eval_times);
-  
-  List output = List::create(
-    Named("forest")=forest,
-    _["oob_error"]=oob_eval,
-    _["oob_preds"]=oob_pred);
-  
-  return output;
-  
   
 }

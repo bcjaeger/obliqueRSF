@@ -8,8 +8,10 @@ ORSF(data, alpha = 0.5, ntree = 100, time = "time",
   status = "status", eval_times = NULL, features = NULL,
   min_events_to_split_node = 5, min_obs_to_split_node = 10,
   min_obs_in_leaf_node = 5, min_events_in_leaf_node = 1, nsplit = 25,
-  max_pval_to_split_node = 0.5, mtry = ceiling(sqrt(ncol(data) - 2)),
-  dfmax = mtry, use.cv = FALSE, verbose = TRUE, random_seed = NULL)
+  gamma = 0.5, max_pval_to_split_node = 0.5,
+  mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = FALSE,
+  verbose = TRUE, compute_oob_predictions = FALSE,
+  random_seed = NULL)
 }
 \arguments{
 \item{data}{The data used to grow the forest.}
@@ -36,6 +38,8 @@ ORSF(data, alpha = 0.5, ntree = 100, time = "time",
 
 \item{nsplit}{The number of random cut-points assessed for each variable.}
 
+\item{gamma}{numeric value that must be greater than 0 . This parameter penalizes complexity in the linear combinations. Higher values of gamma lead to more conservative linear combinations of input variables.}
+
 \item{max_pval_to_split_node}{The maximum p-value corresponding to the log-rank test for splitting a node. If the p-value exceeds this cut-point, the node will not be split.}
 
 \item{mtry}{Number of variables randomly selected as candidates for splitting a node. The default is the square root of the number of features.}
@@ -45,6 +49,8 @@ ORSF(data, alpha = 0.5, ntree = 100, time = "time",
 \item{use.cv}{if TRUE, cross-validation is used to identify optimal values of lambda, a hyper-parameter in penalized regression. if FALSE, a set of candidate lambda values are used. The set of candidate lambda values is built by picking the maximum value of lambda such that the penalized regression model has k degrees of freedom, where k is between 1 and mtry.}
 
 \item{verbose}{If verbose=TRUE, then the ORSF function will print output to console while it grows the tree.}
+
+\item{compute_oob_predictions}{If TRUE, then out-of-bag predictions will be included in the ORSF object.}
 
 \item{random_seed}{If a number is given, then that number is used as a random seed prior to growing the forest. Use this seed to replicate a forest if needed.}
 }
