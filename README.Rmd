@@ -58,19 +58,25 @@ pbc$status[pbc$status>=1]=pbc$status[pbc$status>=1]-1
 # in the way that we would like it to.
 pbc = pbc %>% 
   dplyr::select(-id)%>%
-  mutate(trt=factor(trt),
-         ascites=factor(ascites),
-         hepato=factor(hepato),
-         spiders=factor(spiders),
-         edema=factor(edema),
-         stage=factor(stage,ordered=TRUE),
-         time=time/365.25) 
+  mutate(
+    trt=factor(trt),
+    ascites=factor(ascites),
+    hepato=factor(hepato),
+    spiders=factor(spiders),
+    edema=factor(edema),
+    stage=factor(stage,ordered=TRUE),
+    time=time/365.25
+  ) 
 
-orsf=ORSF(data=pbc, # data to fit trees with
-          ntree=100, # number of trees to fit
-          eval_times=c(1:10), # when will predictions be made?
-          # note: eval_times will be used to make figures
-          verbose=T) # suppresses console output
+orsf=ORSF(
+  data=pbc, # data to fit trees with
+  ntree=100, # number of trees to fit
+  eval_times=c(1:10), # when will predictions be made?
+  # note: eval_times will be used to make figures
+  verbose=T,# suppresses console output
+  compute_oob_predictions = TRUE # return OOB preds
+) 
+
 ```
 
 The `vdplot` function allows you to quickly look at the patterns in the predictions from an ORSF.
@@ -109,50 +115,4 @@ pdplot(object=orsf, xvar='sex',xlab='Sex', xlvls=c("Male","Female"),
 ```
 
 Taking into account the effects of other variables in the data, the interaction between sex and hepato is attenuated. 
-
-# Performance
-
-`orsf` objects take a long time to grow, but they usually provide excellent predictions. Below we use the `pec` package to compare the integrated Brier scores over `r nboots` replications of bootstrap cross validation using the complete cases in the `pbc` data set.
-
-```{r performance}
-
-# it takes a bit more code to incorporate imputation 
-# into bootstrap cross-validation. However, results
-# are similar using only the complete observations,
-# so that's what we will use here
-
-pbc_cmp=na.omit(pbc)
-
-ntree=150
-nsize=20
-
-mdls=list(
-  orsf=ORSF(data=pbc_cmp, ntree=ntree, use.cv = FALSE, 
-            min_obs_to_split_node = nsize, verbose=FALSE),
-  rsf =rfsrc(Surv(time,status)~.,data=pbc_cmp,
-             ntree=ntree,nodesize=nsize),
-  bws = pec::selectCox(Surv(time,status)~., data=pbc_cmp),
-  cboost = pec::coxboost(Hist(time,status)~.,data=pbc_cmp)
-)
-
-# for reproducibility
-set.seed(32989) 
-
-bri_score = pec::pec(mdls, data=pbc_cmp, cens.model = 'cox',
-                     formula = Surv(time,status)~1, 
-                     splitMethod = 'BootCv', B=nboots)
-
-print(bri_score)
-
-
-cnc_index = pec::cindex(mdls, data=pbc_cmp, cens.model = 'cox',
-                        formula = Surv(time,status)~1, 
-                        splitMethod = 'BootCv', B=nboots)
-
-print(cnc_index)
-
-
-```
-
-
 

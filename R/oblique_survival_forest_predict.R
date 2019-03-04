@@ -21,7 +21,7 @@
 #' predict(orsf,newdata=pbc[c(1:5),],times=times)
 
 predict.orsf <- function(object, newdata, times, ...){
-
+  
   
   missing_data <- apply(newdata,2,function(x) any(is.na(x)))
   use_imputation=any(missing_data)
@@ -42,9 +42,10 @@ predict.orsf <- function(object, newdata, times, ...){
   if(class(newdata)[1]!='matrix'){
     newdata = stats::model.matrix(~.,data=newdata)[,-1L]
   }
-
+  
   predict_orsf(object$forest,newx=newdata,times=times)
-
+  
 }
+
 
 

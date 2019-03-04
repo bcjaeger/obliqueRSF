@@ -34,33 +34,33 @@
 #' 
 
 ORSF <- function(data,
-                 alpha=0.50,
-                 ntree=100,
-                 time='time',
-                 status='status',
-                 eval_times=NULL,
-                 features=NULL,
-                 min_events_to_split_node=5,
-                 min_obs_to_split_node=10,
-                 min_obs_in_leaf_node=5,
-                 min_events_in_leaf_node=1,
-                 nsplit=25,
-                 gamma=0.50,
-                 max_pval_to_split_node=0.50,
-                 mtry=ceiling(sqrt(ncol(data)-2)),
-                 dfmax=mtry,
-                 use.cv=FALSE,
-                 verbose=TRUE,
-                 compute_oob_predictions=FALSE,
-                 random_seed=NULL){
- 
+  alpha=0.50,
+  ntree=100,
+  time='time',
+  status='status',
+  eval_times=NULL,
+  features=NULL,
+  min_events_to_split_node=5,
+  min_obs_to_split_node=10,
+  min_obs_in_leaf_node=5,
+  min_events_in_leaf_node=1,
+  nsplit=25,
+  gamma=0.50,
+  max_pval_to_split_node=0.50,
+  mtry=ceiling(sqrt(ncol(data)-2)),
+  dfmax=mtry,
+  use.cv=FALSE,
+  verbose=TRUE,
+  compute_oob_predictions=TRUE,
+  random_seed=NULL){
+  
   if(!is.null(random_seed)){
     set.seed(random_seed)
   }
   
   missing_data <- apply(data,2,function(x) any(is.na(x)))
   use_imputation=any(missing_data)
-
+  
   if(use_imputation){
     cat("\nperforming imputation with missForest:\n")
     imp_data=suppressWarnings(missForest::missForest(xmis=data))
@@ -97,14 +97,14 @@ ORSF <- function(data,
       survival::Surv(time_indx, status_indx) ~ 1,
       type = "kaplan-meier",se.fit=FALSE)
     list(times=s$time,
-         probs=s$surv)
+      probs=s$surv)
   }
   
   bootR <- function(mat,time,status,inb){
     inb=inb+1
     list(mat=mat[inb,],
-         time=time[inb],
-         status=status[inb])
+      time=time[inb],
+      status=status[inb])
   }
   
   netR <- function(dmat,time,status,indx,cols,dfmax,alpha){
@@ -160,14 +160,14 @@ ORSF <- function(data,
           coef(cv.fit, cv.fit$lambda[min(which(cv.fit$glmnet.fit$df>0))]),
           coef(cv.fit,'lambda.1se'),
           coef(cv.fit,'lambda.min'))),
-      silent=TRUE))
+        silent=TRUE))
       
       if(class(res)[1]=='try-error'){
         res=try(
           as.matrix(cbind(
             coef(cv.fit,'lambda.1se'),
             coef(cv.fit,'lambda.min'))),
-        silent=TRUE)
+          silent=TRUE)
       }
       
       if(class(res)[1]=='try-error'){
@@ -175,7 +175,7 @@ ORSF <- function(data,
       }
       
       res
-
+      
     })
     purrr::reduce(out, cbind)
   }
@@ -184,9 +184,9 @@ ORSF <- function(data,
     
     ntimes=length(eval.times)
     conc=pec::cindex(prd,
-                     formula=Surv(time,status)~1,
-                     eval.times=eval.times,
-                     data=data.frame(time=time,status=status))
+      formula=Surv(time,status)~1,
+      eval.times=eval.times,
+      data=data.frame(time=time,status=status))
     conc=mean(conc$AppCindex$matrix,na.rm=T)
     
     intbs=suppressMessages(pec::crps(pec::pec(
@@ -206,40 +206,41 @@ ORSF <- function(data,
   } 
   
   orsf=ORSFcpp(dmat=dmat,
-               features=colnames(dmat),
-               alpha=alpha,
-               time=time,
-               status=status,
-               eval_times=eval_times,
-               min_events_to_split_node=min_events_to_split_node,
-               min_obs_to_split_node=min_obs_to_split_node,
-               min_obs_in_leaf_node=min_obs_in_leaf_node,
-               min_events_in_leaf_node=min_events_in_leaf_node,
-               mtry=mtry,
-               dfmax=dfmax,
-               nsplit=nsplit,
-               ntree=ntree,
-               gamma=gamma,
-               mincriterion=qchisq(1-max_pval_to_split_node,df=1),
-               verbose=verbose,
-               compute_oob=compute_oob_predictions,
-               surv_KM_Rfun=srvR,
-               bootstrap_Rfun=bootR,
-               glmnet_Rfun=if(use.cv){cv.netR} else {netR},
-               forest_eval_Rfun=fevalR)
+    features=colnames(dmat),
+    alpha=alpha,
+    time=time,
+    status=status,
+    eval_times=eval_times,
+    min_events_to_split_node=min_events_to_split_node,
+    min_obs_to_split_node=min_obs_to_split_node,
+    min_obs_in_leaf_node=min_obs_in_leaf_node,
+    min_events_in_leaf_node=min_events_in_leaf_node,
+    mtry=mtry,
+    dfmax=dfmax,
+    nsplit=nsplit,
+    ntree=ntree,
+    gamma=gamma,
+    mincriterion=qchisq(1-max_pval_to_split_node,df=1),
+    verbose=verbose,
+    compute_oob=compute_oob_predictions,
+    surv_KM_Rfun=srvR,
+    bootstrap_Rfun=bootR,
+    glmnet_Rfun=if(use.cv){cv.netR} else {netR},
+    forest_eval_Rfun=fevalR)
   
   output=structure(
     list(forest = orsf$forest,
-         oob_times = if(compute_oob_predictions) eval_times else NULL,
-         oob_preds = if(compute_oob_predictions) orsf$oob_preds else NULL,
-         oob_error = if(compute_oob_predictions) orsf$oob_error else NULL,
-         data=data,
-         call = match.call()),
+      oob_times = if(compute_oob_predictions) eval_times else NULL,
+      oob_preds = if(compute_oob_predictions) orsf$oob_preds else NULL,
+      oob_error = if(compute_oob_predictions) orsf$oob_error else NULL,
+      data=data,
+      call = match.call()),
     class = "orsf")
   
   output$imputation_used= if(use_imputation) TRUE else FALSE 
-
+  
   return(output)
   
 }
+
 
