@@ -1,6 +1,6 @@
 Package: obliqueRSF
 Title: Oblique Random Forests for Right-Censored Time-to-Event Data
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: person("Byron", "Jaeger", email = "bcjaeger@uab.edu", role = c("aut", "cre"))
 Description: Oblique random survival forests incorporate linear combinations of input variables into random survival forests (Ishwaran, 2008 <DOI:10.1214/08-AOAS169>). Regularized Cox proportional hazard models (Simon, 2016 <DOI:10.18637/jss.v039.i05>) are used to identify optimal linear combinations of input variables. 
 Depends: R (>= 3.5.0)

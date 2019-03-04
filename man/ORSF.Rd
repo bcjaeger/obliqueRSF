@@ -10,8 +10,7 @@ ORSF(data, alpha = 0.5, ntree = 100, time = "time",
   min_obs_in_leaf_node = 5, min_events_in_leaf_node = 1, nsplit = 25,
   gamma = 0.5, max_pval_to_split_node = 0.5,
   mtry = ceiling(sqrt(ncol(data) - 2)), dfmax = mtry, use.cv = FALSE,
-  verbose = TRUE, compute_oob_predictions = FALSE,
-  random_seed = NULL)
+  verbose = TRUE, compute_oob_predictions = TRUE, random_seed = NULL)
 }
 \arguments{
 \item{data}{The data used to grow the forest.}
