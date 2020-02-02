@@ -33,6 +33,27 @@
 #' orsf=ORSF(data=pbc,ntree=5)
 #' 
 
+# data = pbc
+# alpha=0.50
+# ntree=100
+# time='time'
+# status='status'
+# eval_times=NULL
+# features=NULL
+# min_events_to_split_node=5
+# min_obs_to_split_node=10
+# min_obs_in_leaf_node=5
+# min_events_in_leaf_node=1
+# nsplit=25
+# gamma=0.50
+# max_pval_to_split_node=0.50
+# mtry=ceiling(sqrt(ncol(data)-2))
+# dfmax=mtry
+# use.cv=FALSE
+# verbose=TRUE
+# compute_oob_predictions=FALSE
+# random_seed=NULL
+
 ORSF <- function(data,
   alpha=0.50,
   ntree=100,
@@ -51,7 +72,7 @@ ORSF <- function(data,
   dfmax=mtry,
   use.cv=FALSE,
   verbose=TRUE,
-  compute_oob_predictions=TRUE,
+  compute_oob_predictions=FALSE,
   random_seed=NULL){
   
   if(!is.null(random_seed)){
@@ -67,13 +88,21 @@ ORSF <- function(data,
     data=imp_data$ximp
   }
   
+  if(any(data[[time]] <0)) stop("some time values are <0", call. = FALSE)
+  
   if(is.factor(data[[status]])){
+    warning("status variable should be coded as 0/1, but it is a factor",
+      call. = FALSE)
     data[[status]] = as.numeric(data[[status]])
   }
   
   if(any(sort(unique(data[[status]]))!=c(0,1))){
     data[[status]][data[[status]]==min(data[[status]])]=0
     data[[status]][data[[status]]==max(data[[status]])]=1
+  }
+
+  if(!all(data[[status]] %in% c(0,1))){
+    stop("status should be numeric and coded as 0 or 1", call. = FALSE)
   }
   
   for(i in names(data)){
@@ -84,13 +113,13 @@ ORSF <- function(data,
   if(is.null(features)){
     features = setdiff(names(data),c(time,status))
   } 
-  
-  #dmat=data.matrix(data[,features])
-  data=dplyr::arrange(data,!!rlang::sym(time))
-  dmat=model.matrix(~.,data=data[,features])[,-1L]
-  time=data[[time]]
-  status=data[[status]]
-  orsf_ids=1:nrow(data)
+
+  data = dplyr::arrange(data,!!rlang::sym(time))
+  dmat = model.matrix(~., data = data[ , features, drop = FALSE])
+  dmat = dmat[,-1L, drop = FALSE]
+  time = data[[time]]
+  status = data[[status]]
+  orsf_ids = 1:nrow(data)
   
   srvR <- function(time_indx, status_indx){
     s=survival::survfit(
@@ -102,7 +131,7 @@ ORSF <- function(data,
   
   bootR <- function(mat,time,status,inb){
     inb=inb+1
-    list(mat=mat[inb,],
+    list(mat=mat[inb,,drop=FALSE],
       time=time[inb],
       status=status[inb])
   }
@@ -112,27 +141,35 @@ ORSF <- function(data,
     indx=indx+1
     cols=cols+1
     
-    out = purrr::map(alpha, .f=function(a){
-      fit <- try(suppressWarnings(glmnet::glmnet(
-        dmat[indx,cols],
-        survival::Surv(time[indx],status[indx]),
-        family="cox",
-        alpha=a,
-        dfmax=dfmax)), silent = TRUE)
-      
-      if(class(fit)[1]=='try-error'){
-        return(as.matrix(cbind(rep(0,dfmax))))
-      }
-      
-      dfs=unique(fit$df)
-      dfs=dfs[dfs>=1]
-      if(length(dfs)>=1){
-        out_indx=sapply(dfs, function(s) min(which(fit$df==s)))
-        as.matrix(fit$beta[,out_indx])
-      } else {
-        matrix(rep(0,dfmax),ncol=1)
-      }
-    }) 
+    out = purrr::map(
+      alpha,
+      .f = function(a) {
+        fit <- try(
+          suppressWarnings(
+            glmnet::glmnet(
+              dmat[indx, cols, drop = FALSE],
+              survival::Surv(time[indx], status[indx]),
+              family = "cox",
+              alpha = a,
+              dfmax = dfmax
+            )
+          ), 
+          silent = TRUE
+        )
+        
+        if(class(fit)[1]=='try-error'){
+          return(as.matrix(cbind(rep(0,dfmax))))
+        }
+        
+        dfs=unique(fit$df)
+        dfs=dfs[dfs>=1]
+        if(length(dfs)>=1){
+          out_indx=sapply(dfs, function(s) min(which(fit$df==s)))
+          as.matrix(fit$beta[,out_indx])
+        } else {
+          matrix(rep(0,dfmax),ncol=1)
+        }
+      }) 
     
     purrr::reduce(out, cbind)
     
@@ -143,40 +180,50 @@ ORSF <- function(data,
     indx=indx+1
     cols=cols+1
     
-    out = purrr::map(alpha, .f=function(a){
-      cv.fit <- try(suppressWarnings(glmnet::cv.glmnet(
-        dmat[indx,cols],
-        survival::Surv(time[indx],status[indx]),
-        family="cox", keep = FALSE, grouped = TRUE,
-        alpha=a, nfolds=min(5,length(indx)), dfmax=dfmax)),
-        silent = TRUE)
-      
-      if(class(cv.fit)[1]=='try-error'){
-        return(as.matrix(cbind(rep(0,dfmax))))
-      }
-      
-      res=suppressWarnings(try(
-        as.matrix(cbind(
-          coef(cv.fit, cv.fit$lambda[min(which(cv.fit$glmnet.fit$df>0))]),
-          coef(cv.fit,'lambda.1se'),
-          coef(cv.fit,'lambda.min'))),
-        silent=TRUE))
-      
-      if(class(res)[1]=='try-error'){
-        res=try(
+    out = purrr::map(
+      alpha,
+      .f = function(a) {
+        cv.fit <- try(suppressWarnings(
+          glmnet::cv.glmnet(
+            dmat[indx, cols, drop = FALSE],
+            survival::Surv(time[indx], status[indx]),
+            family = "cox",
+            keep = FALSE,
+            grouped = TRUE,
+            alpha = a,
+            nfolds = min(5, length(indx)),
+            dfmax = dfmax
+          )
+        ),
+          silent = TRUE
+        )
+        
+        if(class(cv.fit)[1]=='try-error'){
+          return(as.matrix(cbind(rep(0,dfmax))))
+        }
+        
+        res=suppressWarnings(try(
           as.matrix(cbind(
+            coef(cv.fit, cv.fit$lambda[min(which(cv.fit$glmnet.fit$df>0))]),
             coef(cv.fit,'lambda.1se'),
             coef(cv.fit,'lambda.min'))),
-          silent=TRUE)
-      }
-      
-      if(class(res)[1]=='try-error'){
-        res=try(as.matrix(cbind(rep(0,dfmax))))
-      }
-      
-      res
-      
-    })
+          silent=TRUE))
+        
+        if(class(res)[1]=='try-error'){
+          res=try(
+            as.matrix(cbind(
+              coef(cv.fit,'lambda.1se'),
+              coef(cv.fit,'lambda.min'))),
+            silent=TRUE)
+        }
+        
+        if(class(res)[1]=='try-error'){
+          res=try(as.matrix(cbind(rep(0,dfmax))))
+        }
+        
+        res
+        
+      })
     purrr::reduce(out, cbind)
   }
   
@@ -199,11 +246,9 @@ ORSF <- function(data,
     
   }
   
-  
-  
   if(is.null(eval_times)){
     eval_times=seq(min(time[status==1]),max(time[status==1]),length.out=50)
-  } 
+  }
   
   orsf=ORSFcpp(dmat=dmat,
     features=colnames(dmat),

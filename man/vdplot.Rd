@@ -4,11 +4,24 @@
 \alias{vdplot}
 \title{Plot variable dependence using an oblique random survival forest}
 \usage{
-vdplot(object, xvar, include.hist = TRUE, include.points = FALSE,
-  ptsize = 0.75, ytype = "nonevent", event_lab = "death",
-  nonevent_lab = "survival", fvar = NULL, flab = NULL,
-  time_units = "years", xlab = xvar, xvar_units = NULL,
-  xlvls = NULL, sub_times = NULL, se.show = FALSE)
+vdplot(
+  object,
+  xvar,
+  include.hist = TRUE,
+  include.points = FALSE,
+  ptsize = 0.75,
+  ytype = "nonevent",
+  event_lab = "death",
+  nonevent_lab = "survival",
+  fvar = NULL,
+  flab = NULL,
+  time_units = "years",
+  xlab = xvar,
+  xvar_units = NULL,
+  xlvls = NULL,
+  sub_times = NULL,
+  se.show = FALSE
+)
 }
 \arguments{
 \item{object}{an ORSF object (i.e. object returned from the ORSF function)}

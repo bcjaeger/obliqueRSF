@@ -4,11 +4,25 @@
 \alias{pdplot}
 \title{Plot partial variable dependence using an oblique random survival forest}
 \usage{
-pdplot(object, xvar, xlab = NULL, xvar_units = NULL, xvals = NULL,
-  nxpts = 10, ytype = "nonevent", event_lab = "death",
-  nonevent_lab = "survival", fvar = NULL, flab = NULL,
-  flvls = NULL, time_units = "years", xlvls = NULL,
-  sub_times = NULL, separate_panels = TRUE, color_palette = "Dark2")
+pdplot(
+  object,
+  xvar,
+  xlab = NULL,
+  xvar_units = NULL,
+  xvals = NULL,
+  nxpts = 10,
+  ytype = "nonevent",
+  event_lab = "death",
+  nonevent_lab = "survival",
+  fvar = NULL,
+  flab = NULL,
+  flvls = NULL,
+  time_units = "years",
+  xlvls = NULL,
+  sub_times = NULL,
+  separate_panels = TRUE,
+  color_palette = "Dark2"
+)
 }
 \arguments{
 \item{object}{an ORSF object (i.e. object returned from the ORSF function)}

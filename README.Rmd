@@ -68,7 +68,7 @@ pbc = pbc %>%
     time=time/365.25
   ) 
 
-orsf=ORSF(
+orsf <- ORSF(
   data=pbc, # data to fit trees with
   ntree=100, # number of trees to fit
   eval_times=c(1:10), # when will predictions be made?
