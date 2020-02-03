@@ -21,31 +21,28 @@
 #' predict(orsf,newdata=pbc[c(1:5),],times=times)
 
 predict.orsf <- function(object, newdata, times, ...){
-  
-  
+
+
   missing_data <- apply(newdata,2,function(x) any(is.na(x)))
   use_imputation=any(missing_data)
-  
+
   if(use_imputation){
     cat("performing imputation with missForest:")
     imp_data=suppressWarnings(missForest::missForest(xmis=newdata))
     newdata=imp_data$ximp
   }
-  
+
   for(i in names(newdata)){
-    
+
     ordered_fac = all(c("ordered", "factor")%in%class(newdata[[i]]))
     if(ordered_fac) newdata[[i]]=as.numeric(newdata[[i]])
-    
+
   }
-  
+
   if(class(newdata)[1]!='matrix'){
-    newdata = stats::model.matrix(~.,data=newdata)[,-1L]
+    newdata = stats::model.matrix(~.,data=newdata)[,-1L, drop = FALSE]
   }
-  
+
   predict_orsf(object$forest,newx=newdata,times=times)
-  
+
 }
-
-
-
