@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // surv_est
 NumericVector surv_est(NumericVector times, NumericVector probs, NumericVector newtimes);
 RcppExport SEXP _obliqueRSF_surv_est(SEXP timesSEXP, SEXP probsSEXP, SEXP newtimesSEXP) {

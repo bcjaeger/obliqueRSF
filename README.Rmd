@@ -25,7 +25,9 @@ nboots=5
 
 ```
 
+# obliqueRSF is deprecated
 
+The `aorsf` package has superseded `obliqueRSF`. If you would like to do an analysis with oblique random survival forests, I highly recommend you use `aorsf`: https://github.com/bcjaeger/aorsf
 
 # Overview
 

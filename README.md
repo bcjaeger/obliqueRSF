@@ -1,12 +1,22 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-Overview
-========
 
-Oblique random survival forest (ORSFs) are ensembles for right-censured survival data that use linear combinations of input variables to recursively partition a set of training data. Regularized Cox proportional hazard models identify optimal linear combinations of input variables in each recursive partitioning step while building survival trees.
+# obliqueRSF is deprecated
 
-Installation
-============
+The `aorsf` package has superseded `obliqueRSF`. If you would like to do
+an analysis with oblique random survival forests, I highly recommend you
+use `aorsf`: <https://github.com/bcjaeger/aorsf>
+
+# Overview
+
+Oblique random survival forest (ORSFs) are ensembles for right-censured
+survival data that use linear combinations of input variables to
+recursively partition a set of training data. Regularized Cox
+proportional hazard models identify optimal linear combinations of input
+variables in each recursive partitioning step while building survival
+trees.
+
+# Installation
 
 You can install obliqueRSF from github with:
 
@@ -15,13 +25,11 @@ You can install obliqueRSF from github with:
 devtools::install_github("bcjaeger/obliqueRSF")
 ```
 
-Usage
-=====
+# Usage
 
 The `ORSF` function is the center piece of the `obliqueRSF` package
 
 ``` r
-
 data("pbc",package='survival')
 
 # event is death
@@ -43,7 +51,7 @@ pbc = pbc %>%
     time=time/365.25
   ) 
 
-orsf=ORSF(
+orsf <- ORSF(
   data=pbc, # data to fit trees with
   ntree=100, # number of trees to fit
   eval_times=c(1:10), # when will predictions be made?
@@ -57,12 +65,6 @@ orsf=ORSF(
 #>   missForest iteration 2 in progress...done!
 #>   missForest iteration 3 in progress...done!
 #>   missForest iteration 4 in progress...done!
-#>   missForest iteration 5 in progress...done!
-#>   missForest iteration 6 in progress...done!
-#>   missForest iteration 7 in progress...done!
-#>   missForest iteration 8 in progress...done!
-#>   missForest iteration 9 in progress...done!
-#>   missForest iteration 10 in progress...done!
 #> Fitting tree no. 1
 #> Fitting tree no. 2
 #> Fitting tree no. 3
@@ -165,7 +167,8 @@ orsf=ORSF(
 #> Fitting tree no. 100
 ```
 
-The `vdplot` function allows you to quickly look at the patterns in the predictions from an ORSF.
+The `vdplot` function allows you to quickly look at the patterns in the
+predictions from an ORSF.
 
 ``` r
 # Variable dependence plot (vdplot)
@@ -179,9 +182,11 @@ vdplot(object=orsf, xvar='bili', xlab='Bilirubin levels',
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-![](man/figures/vdplot1-1.png)
+![](man/figures/vdplot1-1.png)<!-- -->
 
-here is another application of `vdplot` with a continuous x-variable, but this time we will show predictions at three times: 1 year, 3 years, and 5 years since baseline.
+here is another application of `vdplot` with a continuous x-variable,
+but this time we will show predictions at three times: 1 year, 3 years,
+and 5 years since baseline.
 
 ``` r
 vdplot(object=orsf, xvar='albumin', xlab='Serum albumin', 
@@ -189,25 +194,37 @@ vdplot(object=orsf, xvar='albumin', xlab='Serum albumin',
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-![](man/figures/vdplot2-1.png)
+![](man/figures/vdplot2-1.png)<!-- -->
 
-The `vdplot` function also supports categorical x-variables. Setting the x-variable to `sex`, and the facet variable to `hepato`, we find a clear interaction between sex and the presence of an enlarged liver (i.e., `hepato=1`).
+The `vdplot` function also supports categorical x-variables. Setting the
+x-variable to `sex`, and the facet variable to `hepato`, we find a clear
+interaction between sex and the presence of an enlarged liver (i.e.,
+`hepato=1`).
 
 ``` r
 vdplot(object=orsf, xvar='sex', xlab=c("Sex"), xlvls=c("Male","Female"),
        fvar='hepato',flab=c("Normal size liver","Enlarged liver"))
+#> Warning: Ignoring unknown parameters: fun.ymin, fun.ymax, fun.y
+#> No summary function supplied, defaulting to `mean_se()`
+#> No summary function supplied, defaulting to `mean_se()`
 ```
 
-![](man/figures/vdplot3-1.png)
+![](man/figures/vdplot3-1.png)<!-- -->
 
-Is this interaction something that is purely explained by sex, or is it a confounding effect from other variables that are not the same between the two sexes? We can address this using the partial dependence plot (`pdplot`) function:
+Is this interaction something that is purely explained by sex, or is it
+a confounding effect from other variables that are not the same between
+the two sexes? We can address this using the partial dependence plot
+(`pdplot`) function:
 
 ``` r
 pdplot(object=orsf, xvar='sex',xlab='Sex', xlvls=c("Male","Female"),
        fvar='hepato',flvls=c("Normal size liver","Enlarged liver"),
        sub_times=c(1,3,5,7,9))
+#> Warning: `guides(<scale> = FALSE)` is deprecated. Please use `guides(<scale> =
+#> "none")` instead.
 ```
 
-![](man/figures/pdplot1-1.png)
+![](man/figures/pdplot1-1.png)<!-- -->
 
-Taking into account the effects of other variables in the data, the interaction between sex and hepato is attenuated.
+Taking into account the effects of other variables in the data, the
+interaction between sex and hepato is attenuated.
